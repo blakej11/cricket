@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Cricket_parts")(type "KiCad")(uri "${KIPRJMOD}/Cricket_parts.kicad_sym")(options "")(descr ""))
+)
