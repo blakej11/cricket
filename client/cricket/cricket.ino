@@ -351,7 +351,7 @@ class DFPlayerAsync {
   }
 
   const int kPostSerialInitDelay = 1000; // XXX probably don't need this much
-  const int kPostCommandDelay = 20;
+  const int kPostCommandDelay = 30; // 20 is not enough (for volume at least)
 
   // If "busy" is not set for at least this long after playing a file,
   // it will look for non-busy and then busy again.
@@ -359,13 +359,13 @@ class DFPlayerAsync {
   const int kMinBusyDelay = 200;
 
   void init_step1() {
-    debugln("init_step1");
+    debugln("init_step1: starting serial comms");
     dfplayer_.init();
     action_.invoke_after(kPostSerialInitDelay, [this]() { init_step2(); });
   }
 
   void init_step2() {
-    debugln("init_step2");
+    debugln("init_step2: send init params, wait for reply");
     // Send request for initialization parameters, and discard them.
     dfplayer_.send_cmd(0x3f, 0x00, 0x00);
     dfplayer_.drain_serial();
@@ -373,13 +373,17 @@ class DFPlayerAsync {
   }
 
   void do_volume(byte level) {
-    debugln("do_volume");
+    char message[80];
+    snprintf(message, sizeof (message), "do_volume: %d", level);
+    debugln(message);
     dfplayer_.send_cmd(0x06, 0x00, level);
     post_command_delay();
   }
 
   void do_play_file(byte folder, byte file) {
-    debugln("do_play_file");
+    char message[80];
+    snprintf(message, sizeof (message), "do_play_file: %d/%d", folder, file);
+    debugln(message);
     // This assumes the DFPlayer is in file mode #2 (microSD card 
     // with directories 01-99, with filenames 001.mp3-255.mp3).
     dfplayer_.send_cmd(0x0f, folder, file);
@@ -387,19 +391,19 @@ class DFPlayerAsync {
   }
 
   void do_pause() {
-    debugln("do_pause");
+    debugln("do_pause: sending pause cmd");
     dfplayer_.send_cmd(0x1a, 0, 1);
     post_command_delay();
   }
 
   void do_unpause() {
-    debugln("do_unpause");
+    debugln("do_unpause: sending unpause cmd");
     dfplayer_.send_cmd(0x1a, 0, 0);
     post_command_delay();
   }
 
   void do_stop() {
-    debugln("do_stop");
+    debugln("do_stop: sending stop cmd");
     dfplayer_.send_cmd(0x16, 0, 0);
     post_command_delay();
   }
@@ -610,12 +614,6 @@ class Cricket {
       debug_enabled_(config.debug_enabled) {}
 
   void setup(Net& net) {
-    net.on("/id", [this, &net]() {
-      char mac[17];
-      snprintf(mac, sizeof (mac), "%016llx", net.get_mac());
-      net.sendSuccess(mac);
-    });
-
     net.on("/ping", [this, &net]() {
       ping();
       net.sendSuccess();
@@ -825,6 +823,7 @@ const CricketConfig cricket_config = {
 
   .shutdown_delay_msec = 10000,
   .initial_volume = 0x8, // 0x30 = max
+  .debug_enabled = true,
 };
 
 Cricket cricket(cricket_config);
