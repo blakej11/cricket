@@ -16,7 +16,7 @@
 		)
 	)
 	(property "Value" "SLW-864574-5A-RA-N-D"
-		(at 0 1 0)
+		(at 0 -3.3 0)
 		(unlocked yes)
 		(layer "F.Fab")
 		(uuid "cb38b5e4-c3e0-4af8-9ade-6905afc4a703")
@@ -79,7 +79,7 @@
 		(uuid "f082503c-ef9c-41a0-84b5-699084bbc895")
 	)
 	(fp_text user "${REFERENCE}"
-		(at 0 2.5 0)
+		(at 0 3.2 0)
 		(unlocked yes)
 		(layer "F.Fab")
 		(uuid "759a38dc-486f-4a3f-a70b-58cf5c9c8c76")
@@ -117,7 +117,7 @@
 	(pad "4" thru_hole oval
 		(at -4.1 0)
 		(size 0.8 1.9)
-		(drill oval 0.5 1.6)
+		(drill oval 0.62 1.6)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
 		(uuid "f319297f-692a-4609-aa5c-42e16552c787")
@@ -125,7 +125,7 @@
 	(pad "5" thru_hole oval
 		(at 4.1 0)
 		(size 0.8 1.9)
-		(drill oval 0.5 1.6)
+		(drill oval 0.62 1.6)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
 		(uuid "f5ff58d2-a7d4-4e8c-b7b4-c0e3c5529d5a")
