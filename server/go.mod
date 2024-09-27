@@ -1,4 +1,4 @@
-module cricket/server
+module github.com/blakej11/cricket
 
 go 1.22.4
 

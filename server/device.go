@@ -8,8 +8,8 @@ import "strconv"
 import "strings"
 import "time"
 
-// ServiceInfo holds the information about a cricket obtained from mDNS.
-type ServiceInfo struct {
+// NetLocation holds the information about a cricket obtained from mDNS.
+type NetLocation struct {
 	ID      string
 	Address net.IP
 	Port    int
@@ -17,51 +17,60 @@ type ServiceInfo struct {
 
 // cricket holds all of the per-cricket information available.
 type cricket struct {
-	ServiceInfo
+	NetLocation
 	name		string		// for human-readable names
 	creation	time.Time
 	lastPing	time.Time
+
+	targetVolume	int
 }
 
 var crickets map[string]*cricket
 
-var defaultVolume = 4
-
 // --------------------------------------------------------------------
 
-func MDNSListener(infos <-chan *ServiceInfo) {
-	crickets = make(map[string]*cricket)
-	for i := range infos {
-		Infof("Cricket %q at %v:%d", i.ID, i.Address, i.Port)
-		if _, ok := crickets[i.ID]; ok {
-			Infof("Replacing existing cricket %v", i.ID)
-		}
-		crickets[i.ID] = newCricket(*i)
-	}
-}
-
-// XXX this needs to be thread safe
+// XXX this needs to be thread safe w/r/t CricketListener
 func Player() {
 	go func() {
 		for {
-			time.Sleep(15 * time.Second)
+			time.Sleep(10 * time.Second)
 			for _, c := range crickets {
-				_ = c.blink(2.0, 6)
+				_ = c.blink(2.0, 100, 50, 4)
 			}
 		}
 	}()
 
 	for {
+		time.Sleep(12 * time.Second)
+		for _, c := range crickets { _, _ = c.battery() }
+		time.Sleep(1 * time.Second)
+		for _, c := range crickets { _, _ = c.lightpending() }
+	}
+
+	for {
 		time.Sleep(24 * time.Second)
-		for _, c := range crickets {
-			_ = c.play(1, 1)
-		}
+		// for _, c := range crickets { _ = c.play(1, 1) }
 	}
 }
 
-func newCricket(info ServiceInfo) *cricket {
+// --------------------------------------------------------------------
+
+var defaultVolume = 24
+
+func CricketListener(locs <-chan *NetLocation) {
+	crickets = make(map[string]*cricket)
+	for l := range locs {
+		Infof("Cricket %q at %v:%d", l.ID, l.Address, l.Port)
+		if _, ok := crickets[l.ID]; ok {
+			Infof("Replacing existing cricket %v", l.ID)
+		}
+		crickets[l.ID] = newCricket(*l, defaultVolume)
+	}
+}
+
+func newCricket(loc NetLocation, targetVolume int) *cricket {
 	c := &cricket{
-		ServiceInfo: info,
+		NetLocation: loc,
 		name: "",
 		creation: time.Now(),
 	}
@@ -69,7 +78,7 @@ func newCricket(info ServiceInfo) *cricket {
 	go func(c *cricket) {
 		// XXX
 		time.Sleep(time.Second)
-		_ = c.setVolume(defaultVolume)
+		_ = c.setVolume(targetVolume)
 	}(c)
 
 	return c
@@ -85,22 +94,42 @@ func (c *cricket) ping() error {
 }
 
 func (c *cricket) play(folder, file int) error {
-	arg1 := fmt.Sprintf("folder=%d", folder);
-	arg2 := fmt.Sprintf("file=%d", file);
-	_, err := c.getURL("play", arg1, arg2);
-	return err
+	msg, err := c.getURL("play",
+		fmt.Sprintf("folder=%d", folder),
+		fmt.Sprintf("file=%d", file))
+	if err != nil {
+		return err
+	}
+
+	res := strings.Split(msg, ":")
+	if len(res) == 2 {
+		volume, err := strconv.Atoi(strings.TrimSpace(res[1]))
+		// This can happen if a device resets.
+		if err == nil && volume != c.targetVolume {
+			c.setVolume(c.targetVolume)
+		}
+	}
+	return nil
 }
 
 func (c *cricket) setVolume(volume int) error {
-	arg1 := fmt.Sprintf("volume=%d", volume);
+	arg1 := fmt.Sprintf("volume=%d", volume)
 	_, err := c.getURL("setvolume", arg1, "persist=true")
-	return err
+	c.targetVolume = volume
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (c *cricket) blink(speed float32, reps int) error {
-	arg1 := fmt.Sprintf("speed=%f", speed);
-	arg2 := fmt.Sprintf("reps=%d", reps);
-	_, err := c.getURL("blink", arg1, arg2)
+func (c *cricket) blink(speed float32, delay, jitter, reps int) error {
+	_, err := c.getURL("blink",
+		fmt.Sprintf("speed=%f", speed),
+		fmt.Sprintf("delay=%d", delay),
+		fmt.Sprintf("jitter=%d", jitter),
+		fmt.Sprintf("reps=%d", reps))
 	return err
 }
 
@@ -124,21 +153,31 @@ func (c *cricket) battery() (float32, error) {
 	if err != nil {
 		return 0.0, err
 	}
-	// strings.TrimSpace()?
-	v, err := strconv.ParseFloat(body, 32)
+	v, err := strconv.ParseFloat(strings.TrimSpace(body), 32)
 	if err != nil {
 		return 0.0, err
 	}
 	return float32(v), nil
 }
 
-func (c *cricket) queue() (int, error) {
-	body, err := c.getURL("queue")
+func (c *cricket) soundpending() (int, error) {
+	body, err := c.getURL("soundpending")
 	if err != nil {
 		return 0, err
 	}
-	// strings.TrimSpace()?
-	v, err := strconv.ParseInt(body, 10, 32)
+	v, err := strconv.ParseInt(strings.TrimSpace(body), 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return int(v), nil
+}
+
+func (c *cricket) lightpending() (int, error) {
+	body, err := c.getURL("lightpending")
+	if err != nil {
+		return 0, err
+	}
+	v, err := strconv.ParseInt(strings.TrimSpace(body), 10, 32)
 	if err != nil {
 		return 0, err
 	}

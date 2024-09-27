@@ -6,7 +6,7 @@ import "time"
 
 import zeroconf "github.com/libp2p/zeroconf/v2"
 
-func mDNSResolver(infos chan<- *ServiceInfo) {
+func mDNSResolver(locs chan<- *NetLocation) {
 	entries := make(chan *zeroconf.ServiceEntry)
 	go func(results <-chan *zeroconf.ServiceEntry) {
 		for entry := range results {
@@ -17,7 +17,7 @@ func mDNSResolver(infos chan<- *ServiceInfo) {
 			if len(s) < 2 || !strings.HasPrefix(s[0], "Cricket") {
 				continue
 			}
-			infos <- &ServiceInfo{
+			locs <- &NetLocation{
 				ID:      s[1],
 				Address: entry.AddrIPv4[0],
 				Port:    entry.Port,
@@ -35,10 +35,10 @@ func mDNSResolver(infos chan<- *ServiceInfo) {
 }
 
 func main() {
-	infos := make(chan *ServiceInfo)
+	locs := make(chan *NetLocation)
 
-	go mDNSResolver(infos)
-	go MDNSListener(infos)
+	go mDNSResolver(locs)
+	go CricketListener(locs)
 
 	go Player()
 
