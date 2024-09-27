@@ -17,8 +17,8 @@
 		)
 	)
 	(property "Value" "SOT95P280X100-6N"
-		(at 0 0 0)
-		(layer "F.SilkS")
+		(at 0 2.8 0)
+		(layer "F.Fab")
 		(hide yes)
 		(uuid "cf39ccb9-6519-4cf3-ab59-77d2f460ec38")
 		(effects
@@ -136,56 +136,6 @@
 		(uuid "a7d4dea0-cdec-47b1-92f0-edb68000450b")
 	)
 	(fp_line
-		(start -0.825 -1.45)
-		(end 0.825 -1.45)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(layer "Dwgs.User")
-		(uuid "c4f83f34-3441-43d6-b5da-8f6cb60f416b")
-	)
-	(fp_line
-		(start -0.825 -0.5)
-		(end 0.125 -1.45)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(layer "Dwgs.User")
-		(uuid "50c07293-8796-4365-8f2a-a54d649577c2")
-	)
-	(fp_line
-		(start -0.825 1.45)
-		(end -0.825 -1.45)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(layer "Dwgs.User")
-		(uuid "57270d9e-643f-4341-a924-c14cfac8b9bf")
-	)
-	(fp_line
-		(start 0.825 -1.45)
-		(end 0.825 1.45)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(layer "Dwgs.User")
-		(uuid "be5c10eb-b6a9-4974-b15e-92a3254b630b")
-	)
-	(fp_line
-		(start 0.825 1.45)
-		(end -0.825 1.45)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(layer "Dwgs.User")
-		(uuid "67792a08-96a3-41a0-bd37-9c6ae5cf18da")
-	)
-	(fp_line
 		(start 2.1 -1.75)
 		(end 2.1 1.75)
 		(stroke
@@ -204,6 +154,83 @@
 		)
 		(layer "Dwgs.User")
 		(uuid "eb76b405-28dc-43a4-bf09-cec26f1b071d")
+	)
+	(fp_line
+		(start -0.825 -1.45)
+		(end 0.825 -1.45)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "c4f83f34-3441-43d6-b5da-8f6cb60f416b")
+	)
+	(fp_line
+		(start -0.825 1.45)
+		(end -0.825 -1.45)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "57270d9e-643f-4341-a924-c14cfac8b9bf")
+	)
+	(fp_line
+		(start 0.825 -1.45)
+		(end 0.825 1.45)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "be5c10eb-b6a9-4974-b15e-92a3254b630b")
+	)
+	(fp_line
+		(start 0.825 1.45)
+		(end -0.825 1.45)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "67792a08-96a3-41a0-bd37-9c6ae5cf18da")
+	)
+	(fp_circle
+		(center -1.01 -1.37)
+		(end -0.967574 -1.37)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill solid)
+		(layer "F.Fab")
+		(uuid "cf61b36a-a360-4abe-8226-b8cf1a932fc5")
+	)
+	(fp_text user "Q**"
+		(at 1.18 -1.84 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "43e67f35-0e3d-4f18-9643-f2a55c4aa5ed")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "MOSFET"
+		(at -2.6 3.3 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "4fad42a8-6caa-46bb-b797-5bef57ad29ce")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify left bottom)
+		)
 	)
 	(pad "1" smd rect
 		(at -1.2 -0.95 90)

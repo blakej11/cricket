@@ -485,7 +485,7 @@
       "idf": "",
       "netlist": "",
       "plot": "/tmp/cricket",
-      "pos_files": "",
+      "pos_files": "/tmp/place",
       "specctra_dsn": "",
       "step": "",
       "svg": "",
