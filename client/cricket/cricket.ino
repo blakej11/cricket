@@ -49,6 +49,8 @@ class Net {
     debugln(".local/");
 
     server_.begin();
+    // Without this, the server calls delay(1) every loop()!
+    server_.enableDelay(false);
 
     on("/wifi", [this]() {
       char buf[80];
@@ -495,65 +497,98 @@ class Firefly {
     pinMode(pin_, OUTPUT);
   }
 
-  void add_blink(float speed, int reps) {
-    Blink b{
-      .reps = reps,
-      .sign = 1,
-      .counter = 0,
-      .pwm_value = 0,
-    };
-
-    if (speed > 1.0) {
-      b.delay = 1;
-      b.speed = static_cast<int>(speed);
-    } else {
-      float delay = 1.0 / speed;
-      if (isinf(delay)) delay = 1000.0; // just don't crash please
-      b.delay = static_cast<int>(delay);
-      b.speed = 1;
+  void add_blink(float speed, int delay, int jitter, int reps) {
+    if (speed < 0.01) {
+      speed = 0.01;
+    } else if (speed >= 255.0) {
+      speed = 255.0;
+    }
+    if (delay < 0) {
+      delay = 0;
+    }
+    if (jitter < 0) {
+      jitter = 0;
     }
 
-    blinks_.push(b);
+    blinks_.push(BlinkSet {
+      .speed = speed,
+      .delay = delay,
+      .jitter = jitter,
+      .reps = reps,
+      .sign = 1,
+      .counter = 0.0,
+      .delay_counter = 0,
+      .pwm_value = 0,
+    });
+  }
+
+  unsigned int work_pending() {
+    return blinks_.size() + (b_.reps > 0 ? 1 : 0);
   }
 
   void loop() {
+    // Current blink set is done.
     if (b_.reps <= 0) {
       if (blinks_.empty()) return;
       b_ = blinks_.front();
       blinks_.pop();
     }
 
-    ++b_.counter;
-    if (b_.counter % b_.delay != 0) return;
-
-    if (b_.sign == 1 && b_.pwm_value + b_.speed > 256) {
-      b_.sign = -1;
-      b_.pwm_value = 255;
-    } else if (b_.sign == -1 && b_.pwm_value - b_.speed < 0) {
-      b_.sign = 1;
-      b_.pwm_value = 0;
-      --b_.reps;
-    } else {
-      b_.pwm_value += b_.speed * b_.sign;
+    // Delay between blinks in a set.
+    if (b_.sign == 0) {
+      if (b_.delay_counter == 0) {
+        --b_.reps;
+        b_.sign = 1;
+      } else {
+        --b_.delay_counter;
+      }
+      return;
     }
 
-    analogWrite(pin_, b_.pwm_value);
+    float new_counter = b_.counter + b_.speed * b_.sign;
+    if (static_cast<int>(new_counter) == b_.pwm_value) {
+      b_.counter = new_counter;
+    } else {
+      if (new_counter >= 256.0) {
+        b_.sign = -1;
+        new_counter = b_.counter - b_.speed;
+      } else if (new_counter < 0.0) {
+        b_.sign = 0;
+        new_counter = 0.0;
+
+        // Generate a random number in the range [-1.0, 1.0).
+        const float scale = 65536.0;
+        float rand = static_cast<float>(random(scale * 2)) / scale - 1.0;
+
+        float jitter = static_cast<float>(b_.jitter) * rand;
+        int delay_counter = b_.delay + static_cast<int>(jitter);
+        if (delay_counter < 0) {
+          delay_counter = 0;
+        }
+        b_.delay_counter = delay_counter;
+      }
+      b_.counter = new_counter;
+      b_.pwm_value = static_cast<int>(new_counter);
+      analogWrite(pin_, b_.pwm_value);
+    }
   }
 
  private:
-  struct Blink {
-    int speed; // how much to increment the PWM value each time
-    int delay; // how many iterations to wait between PWM increments
-    int reps;  // how many times to blink it
+  struct BlinkSet {
+    float speed; // how much to increment the PWM value each time
+    int delay;   // how much to wait between blinks
+    int jitter;  // the max amount that "delay" can vary each time
+    int reps;    // how many times to blink it
 
-    int sign;
-    int counter;
+    int sign;      // +1 for brighter, -1 for dimmer, 0 for delay
+    float counter;
+    int delay_counter;
     int pwm_value;
   };
 
   byte pin_;
-  std::queue<Blink> blinks_;
-  Blink b_;
+  std::queue<BlinkSet> blinks_;
+  BlinkSet b_;
 };
 
 // ------------------------------------------------------------------
@@ -621,14 +656,17 @@ class Cricket {
 
     net.on("/play", [this, &net]() {
       int folder = net.arg("folder").toInt();
-      int file = net.arg("folder").toInt();
+      int file = net.arg("file").toInt();
       if (folder < 1 || folder > 99) {
         net.sendFailure("folder must be between 1 and 99 inclusive");
       } else if (file < 1 || file > 255) {
         net.sendFailure("file must be between 1 and 255 inclusive");
       } else {
         play(folder, file);
-        net.sendSuccess();
+        char msg[80];
+        // the server code expects the volume to immediately follow a colon
+        snprintf(msg, sizeof (msg), "playing at volume:%d", volume_);
+        net.sendSuccess(msg);
       }
     });
 
@@ -650,13 +688,15 @@ class Cricket {
 
     net.on("/blink", [this, &net]() {
       float speed = net.arg("speed").toFloat();
+      int delay = net.arg("delay").toInt();
+      int jitter = net.arg("jitter").toInt();
       int reps = net.arg("reps").toInt();
       if (speed < 0.001) {
         net.sendFailure("speed must be faster");
       } else if (reps <= 0) {
         net.sendFailure("reps must be a positive number");
       } else {
-        add_blink(speed, reps);
+        add_blink(speed, delay, jitter, reps);
         net.sendSuccess();
       }
     });
@@ -680,8 +720,12 @@ class Cricket {
       net.sendSuccess(String(read_battery_voltage()));
     });
 
-    net.on("/queue", [this, &net]() {
-      net.sendSuccess(String(work_pending()));
+    net.on("/soundpending", [this, &net]() {
+      net.sendSuccess(String(sound_pending()));
+    });
+
+    net.on("/lightpending", [this, &net]() {
+      net.sendSuccess(String(light_pending()));
     });
   }
 
@@ -719,9 +763,9 @@ class Cricket {
     return true;
   }
 
-  void add_blink(float speed, int reps) {
+  void add_blink(float speed, int delay, int jitter, int reps) {
     debugln("cricket: blink");
-    firefly_.add_blink(speed, reps);
+    firefly_.add_blink(speed, delay, jitter, reps);
   }
 
   void pause() {
@@ -746,8 +790,11 @@ class Cricket {
     return battery_.read_voltage();
   }
 
-  unsigned int work_pending() {
+  unsigned int sound_pending() {
     return dfplayer_.work_pending();
+  }
+  unsigned int light_pending() {
+    return firefly_.work_pending();
   }
 
   void sleep_enter() {
@@ -795,10 +842,6 @@ class Cricket {
     shutdown_deadline_ = 0;
   }
 
-  void debug(String s) {
-    Serial.println(s);
-  }
-
   DFPlayerAsync dfplayer_;
   Mosfet mosfet_;
   Firefly firefly_;
@@ -829,14 +872,8 @@ const CricketConfig cricket_config = {
 Cricket cricket(cricket_config);
 
 const NetConfig net_config = {
-  // .ssid = "MagpieNest",
-  // .pass = "manateescorpiondualism",
-
-  // .ssid = "Terabithia Google",
-  // .pass = "thegirldies6420",
-
-  .ssid = "darkganache", // -5G is served by my extender, don't use that
-  .pass = "valrhona",
+  .ssid = "SSID",
+  .pass = "PASSWORD",
 
   .port = 80,
   .debug_enabled = true,
