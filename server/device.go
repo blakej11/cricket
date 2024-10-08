@@ -31,26 +31,24 @@ var crickets map[string]*cricket
 
 // XXX this needs to be thread safe w/r/t CricketListener
 func Player() {
-	go func() {
-		for {
-			time.Sleep(10 * time.Second)
-			for _, c := range crickets {
-				_ = c.blink(2.0, 100, 50, 4)
-			}
-		}
-	}()
+        go func() {
+                for {
+                        time.Sleep(10 * time.Second)
+                        for _, c := range crickets { _ = c.blink(2.0, 100, 50, 4) }
+                }
+        }()
 
-	for {
-		time.Sleep(12 * time.Second)
-		for _, c := range crickets { _, _ = c.battery() }
-		time.Sleep(1 * time.Second)
-		for _, c := range crickets { _, _ = c.lightpending() }
-	}
+        go func() {
+                for {
+                        time.Sleep(11 * time.Second)
+                        for _, c := range crickets { _, _ = c.battery() }
+                }
+        }()
 
-	for {
-		time.Sleep(24 * time.Second)
-		// for _, c := range crickets { _ = c.play(1, 1) }
-	}
+        for {
+                time.Sleep(15 * time.Second)
+                for _, c := range crickets { _ = c.play(1, 1, 0.0, "") }
+        }
 }
 
 // --------------------------------------------------------------------
