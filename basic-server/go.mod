@@ -1,4 +1,4 @@
-module github.com/blakej11/cricket
+module github.com/blakej11/basic-cricket
 
 go 1.22.4
 

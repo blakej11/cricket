@@ -47,7 +47,7 @@ func Player() {
 
         for {
                 time.Sleep(15 * time.Second)
-                for _, c := range crickets { _ = c.play(1, 1, 0.0, "") }
+                for _, c := range crickets { _ = c.play(1, 1) }
         }
 }
 
