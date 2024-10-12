@@ -1,6 +1,6 @@
 module github.com/blakej11/cricket
 
-go 1.22.4
+go 1.23.2
 
 require github.com/libp2p/zeroconf/v2 v2.2.0
 
