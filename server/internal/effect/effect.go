@@ -3,6 +3,7 @@ package effect
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
         "github.com/blakej11/cricket/internal/client"
@@ -25,6 +26,7 @@ type Config struct {
 
 // Effect is the instantiation of a Config.
 type Effect struct {
+	name		string
 	lease		lease.Config
 	alg		Algorithm
 	fileSets	map[string]*fileset.Set
@@ -75,6 +77,7 @@ func New(name string, c Config, fileSets map[string]*fileset.Set) (*Effect, erro
 	}
 
 	return &Effect{
+		name:		name,
 		lease:		c.Lease,
 		alg:		alg,
 		fileSets:	fss,
@@ -95,8 +98,8 @@ type drain struct {
 // until all of the client leases are returned.
 // It returns an error if the lease could not be satisfied.
 func (e *Effect) Run() error {
-        ctx, cancel := context.WithTimeout(context.Background(), e.duration.Duration())
-        defer cancel()
+        dur := e.duration.Duration()
+        ctx, cancel := context.WithTimeout(context.Background(), dur)
 
 	clients, err := lease.Request(e.lease, e.fleetFraction.Float64())
 	if err != nil {
@@ -113,7 +116,11 @@ func (e *Effect) Run() error {
 	}
 
 	go func() {
+		defer cancel()
+
+		log.Infof("Start  effect %q: duration %v, params %s", e.name, dur, algParams.String())
 		e.alg.Run(ctx, algParams)
+		log.Infof("Finish effect %q: params %s", e.name, algParams.String())
 
 		// Now, drain the queue on each client.
 		// We will hang around as long as necessary to do so.
@@ -178,6 +185,23 @@ type AlgParams struct {
 	FileSets	map[string]*fileset.Set
 	Parameters	map[string]*random.Variable
 	Clients		[]types.ID
+}
+
+func (a *AlgParams) String() string {
+	fss := []string{}
+	for n := range a.FileSets {
+		fss = append(fss, n)
+	}
+	params := []string{}
+	for n := range a.Parameters {
+		params = append(params, n)
+	}
+	clients := []string{}
+	for _, n := range a.Clients {
+		clients = append(clients, string(n))
+	}
+	return fmt.Sprintf("<filesets [ %s ], params [ %s ], clients [ %s ]>",
+	    strings.Join(fss, ","), strings.Join(params, ","), strings.Join(clients, ","))
 }
 
 type Algorithm interface {

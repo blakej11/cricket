@@ -97,10 +97,11 @@ func (r *addClientMessage) handle() {
 	if _, ok := data.clients[r.id]; ok {
 		c := data.clients[r.id]
 		if !c.suspended {
-			log.Fatalf("duplicate request to add client %q", r.id)
+			log.Infof("got new add from existing client %q (%q, loc %q)", r.id, c.name, c.physLocation)
 		}
 		c.suspended = false
 		lease.Resume(r.id)
+		log.Infof("resuming client %q (%q, loc %q)", r.id, c.name, c.physLocation)
 		return
 	}
 
@@ -110,6 +111,7 @@ func (r *addClientMessage) handle() {
 		physLocation = conf.PhysLocation
 		name = conf.Name
 	}
+	log.Infof("adding new client %q (%q, loc %q)", r.id, name, physLocation)
 
 	c := &client{
 		id:		r.id,
@@ -140,8 +142,10 @@ func (r *delClientMessage) handle() {
 	if _, ok := data.clients[r.id]; !ok {
 		log.Fatalf("request to remove nonexistent client %q", r.id)
 	}
-	data.clients[r.id].suspended = true
+	c := data.clients[r.id]
+	c.suspended = true
 	lease.Suspend(r.id)
+	log.Infof("suspending client %q (%q, loc %q)", r.id, c.name, c.physLocation)
 }
 
 // ---------------------------------------------------------------------
@@ -219,8 +223,11 @@ func (c *client) start() {
 	go c.heapThread()
 	go c.deviceThread()
 
-	r := &KeepVoltageUpdated{}
-	Action(c.id, context.Background(), r, time.Now().Add(voltageUpdateDelay))
+	v := &SetVolume{Volume: c.targetVolume}
+	Action(c.id, context.Background(), v, time.Now())
+
+	k := &KeepVoltageUpdated{}
+	Action(c.id, context.Background(), k, time.Now().Add(voltageUpdateDelay))
 }
 
 func (c *client) heapThread() {
@@ -238,6 +245,7 @@ func (c *client) heapThread() {
 
 		poppedMsg := heap.Pop(c.heap).(clientMessage)
 		if poppedMsg.ctx.Err() != nil {
+			log.Infof("%v: discarding expired message: %v", c.id, poppedMsg.ctx.Err())
 			continue
 		}
 
@@ -286,13 +294,13 @@ func (r *Ping) handle(ctx context.Context, c *client) error {
 }
 
 type Play struct {
-	fileset.File
+	File	fileset.File
 }
 
 func (r *Play) handle(ctx context.Context, c *client) error {
 	msg, err := c.getURL(ctx, "play",
-		fmt.Sprintf("folder=%d", r.Folder),
-		fmt.Sprintf("file=%d", r.File))
+		fmt.Sprintf("folder=%d", r.File.Folder),
+		fmt.Sprintf("file=%d", r.File.File))
 	if err != nil {
 		return err
 	}
@@ -382,7 +390,7 @@ func (r *KeepVoltageUpdated) handle(ctx context.Context, c *client) error {
 
 	c.voltage = float32(p)
 	c.lastVoltageUpdate = time.Now()
-	log.Infof("voltage is %v", p)
+	log.Infof("voltage is %.2f", p)
 
 	Action(c.id, ctx, r, time.Now().Add(voltageUpdateDelay))
 	return nil
@@ -442,7 +450,7 @@ func (c *client) getURL(ctx context.Context, command string, args ...string) (st
 		if ctx.Err() == nil {
 			c.lastFailureCmd = time.Now()
 		}
-		return "", fmt.Errorf("[%s] %s: %v", c.id, message, err)
+		return "", fmt.Errorf("[%s] %s: err = %v", c.id, message, err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -461,7 +469,7 @@ func (c *client) getURL(ctx context.Context, command string, args ...string) (st
 		return getURLFailure(err, fmt.Sprintf("error while reading body from %s", desc))
 	}
 	if resp.StatusCode > 299 {
-		return getURLFailure(err, fmt.Sprintf("got failure status code (%d) from %s", resp.StatusCode, desc))
+		return getURLFailure(err, fmt.Sprintf("got failure status code (%d) from %s: %q", resp.StatusCode, desc, body))
 	}
 
 	// Infof("[%s] %s returned success: %s", c.id, desc, body)
