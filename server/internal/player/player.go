@@ -74,13 +74,14 @@ func (p *Player) start() {
 			}
 		}
 
-		err := eff.effect.Run()
-
-		log.Infof("running %v effect %q returned %v", p.ty, eff.name, err)
-		if err == nil {
-			eff.weight = eff.baseWeight
-		} else {
-			eff.weight++
+		if eff != nil {
+			err := eff.effect.Run()
+			log.Infof("running %v effect %q returned %v", p.ty, eff.name, err)
+			if err == nil {
+				eff.weight = eff.baseWeight
+			} else {
+				eff.weight++
+			}
 		}
 
 		time.Sleep(p.delay.Duration())
