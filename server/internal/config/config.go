@@ -91,13 +91,8 @@ func ParseJSON(jsonBlob []byte) (*ConfigImpl, error) {
 func (c *ConfigImpl) Run() { 
 	client.Configure(c.defaultVolume, c.clients)
 
-	if false {
-		mdns.Start()
-		for _, p := range c.players {
-			p.Start()
-		}
-
-		ctx := context.Background()
-		<-ctx.Done()
+	mdns.Start()
+	for _, p := range c.players {
+		p.Start()
 	}
 }

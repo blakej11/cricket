@@ -28,5 +28,6 @@ func main() {
 
 	cfg.Run()
 
-	fmt.Printf("%v", *cfg)
+	ctx := context.Background()
+	<-ctx.Done()
 }
