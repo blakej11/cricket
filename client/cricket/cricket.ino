@@ -8,6 +8,8 @@
 #include "driver/rtc_io.h"
 #include <esp_pm.h>
 
+#include "password.h"
+
 // Generate a uniformly distributed random number, given a mean and
 // a variance. The number will be in the range [mean - var, mean + var),
 // but will always be at least 0.
@@ -968,8 +970,8 @@ const CricketConfig cricket_config = {
   .shutdown_delay_msec = 10000,
   .initial_volume = 0x8, // 0x30 = max
 
-  .ssid = "SSID",
-  .pass = "PASSWORD",
+  .ssid = SSID,
+  .pass = PASSWORD,
 
   .port = 80,
 
