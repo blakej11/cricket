@@ -8,25 +8,34 @@
 #include "driver/rtc_io.h"
 #include <esp_pm.h>
 
+// Generate a uniformly distributed random number, given a mean and
+// a variance. The number will be in the range [mean - var, mean + var),
+// but will always be at least 0.
+static int generate_random(int mean, int var) {
+  // Generate a random number in the range [-1.0, 1.0).
+  const float scale = 65536.0;
+  float rand = static_cast<float>(random(scale * 2)) / scale - 1.0;
+
+  float j = static_cast<float>(jitter) * rand;
+  int d = delay + static_cast<int>(j);
+  if (d < 0) {
+    d = 0;
+  }
+  return d;
+}
+
 // ------------------------------------------------------------------
-
-struct NetConfig {
-  String ssid;
-  String pass;
-
-  int port;
-
-  bool debug_enabled;
-};
 
 class Net {
  public:
-  Net(const NetConfig& config) : config_(config), mdns_(udp_), server_(config.port) {}
+  Net(const String& ssid, const String& pass, int port, bool debug_enabled) :
+    ssid_(ssid), pass_(pass), debug_enabled_(debug_enabled),
+    mdns_(udp_), server_(port) {}
 
   void setup() {
     debugln("\nConnecting to WiFi:");
     WiFi.mode(WIFI_STA);
-    WiFi.begin(config_.ssid, config_.pass);
+    WiFi.begin(ssid_, pass_);
     while (WiFi.status() != WL_CONNECTED) {
       char buf[80];
       wifi_status(buf, sizeof (buf));
@@ -103,12 +112,10 @@ class Net {
 
  private:
   template <typename T> void debug(T t) {
-    if (!config_.debug_enabled) return;
-    Serial.print(t);
+    if (debug_enabled_) Serial.print(t);
   }
   template <typename T> void debugln(T t) {
-    if (!config_.debug_enabled) return;
-    Serial.println(t);
+    if (debug_enabled_) Serial.println(t);
   }
 
   void wifi_status(char *buf, size_t len) {
@@ -154,7 +161,9 @@ class Net {
     snprintf(buf, len, "WiFi RSSI: %d status: %8s\n", WiFi.RSSI(), status);
   }
 
-  NetConfig config_;
+  String ssid_;
+  String pass_;
+  bool debug_enabled_;
 
   WiFiUDP udp_;
   MDNS mdns_;
@@ -277,44 +286,48 @@ class DelayedAction {
 
 class DFPlayerAsync {
  public:
-  DFPlayerAsync(byte tx_pin, byte rx_pin, byte busy_pin) :
-      dfplayer_(tx_pin, rx_pin, busy_pin) {}
+  DFPlayerAsync(byte tx_pin, byte rx_pin, byte busy_pin, bool debug_enabled) :
+      dfplayer_(tx_pin, rx_pin, busy_pin), debug_enabled_(debug_enabled) {}
 
   // Call this after power is provided to DFPlayer.
-  void init() {
-    debugln("init");
-    work_queue_.push([this]() { init_step1(); });
+  void enqueue_init() {
+    debugln("pushing: DFPlayer init");
+    work_queue_.push([this]() { do_init_step1(); });
     loop();
   }
 
-  bool volume(byte level) {
-    debugln("volume");
+  bool enqueue_volume(byte level) {
+    char buf[80];
+    snprintf(buf, sizeof (buf), "pushing: volume %d", level);
+    debugln(buf);
     if (level > 0x30) return false;
     work_queue_.push([this, level]() { do_volume(level); });
     loop();
     return true;
   }
 
-  void play_file(byte folder, byte file) {
-    debugln("play_file");
+  void enqueue_play_file(byte folder, byte file) {
+    char buf[80];
+    snprintf(buf, sizeof (buf), "pushing: play %d/%d", folder, file);
+    debugln(buf);
     work_queue_.push([this, folder, file]() { do_play_file(folder, file); });
     loop();
   }
 
-  void pause() {
-    debugln("pause");
+  void enqueue_pause() {
+    debugln("pushing: pause");
     work_queue_.push([this]() { do_pause(); });
     loop();
   }
 
-  void unpause() {
-    debugln("unpause");
+  void enqueue_unpause() {
+    debugln("pushing: unpause");
     work_queue_.push([this]() { do_unpause(); });
     loop();
   }
 
-  void stop() {
-    debugln("stop");
+  void enqueue_stop() {
+    debugln("pushing: stop");
     work_queue_.push([this]() { do_stop(); });
     loop();
   }
@@ -327,7 +340,7 @@ class DFPlayerAsync {
   // Call this when power is about to be removed.
   // This executes synchronously.
   void fini() {
-    debugln("fini");
+    debugln("DFPlayer fini");
     action_.cancel();
     dfplayer_.fini();
     drain_work_queue();
@@ -348,8 +361,8 @@ class DFPlayerAsync {
   }
 
  private:
-  void debugln(String s) { // XXX
-    Serial.println(s);
+  void debugln(String s) {
+    if (debug_enabled_) Serial.println(s);
   }
 
   const int kPostSerialInitDelay = 1000; // XXX probably don't need this much
@@ -360,14 +373,14 @@ class DFPlayerAsync {
   // XXX: this will cause a hang if any files are <200 msec
   const int kMinBusyDelay = 200;
 
-  void init_step1() {
-    debugln("init_step1: starting serial comms");
+  void do_init_step1() {
+    debugln("running: init_step1 (start serial comms)");
     dfplayer_.init();
-    action_.invoke_after(kPostSerialInitDelay, [this]() { init_step2(); });
+    action_.invoke_after(kPostSerialInitDelay, [this]() { do_init_step2(); });
   }
 
-  void init_step2() {
-    debugln("init_step2: send init params, wait for reply");
+  void do_init_step2() {
+    debugln("running: init_step2 (send init params, wait for reply)");
     // Send request for initialization parameters, and discard them.
     dfplayer_.send_cmd(0x3f, 0x00, 0x00);
     dfplayer_.drain_serial();
@@ -376,7 +389,7 @@ class DFPlayerAsync {
 
   void do_volume(byte level) {
     char message[80];
-    snprintf(message, sizeof (message), "do_volume: %d", level);
+    snprintf(message, sizeof (message), "running: volume %d", level);
     debugln(message);
     dfplayer_.send_cmd(0x06, 0x00, level);
     post_command_delay();
@@ -384,7 +397,7 @@ class DFPlayerAsync {
 
   void do_play_file(byte folder, byte file) {
     char message[80];
-    snprintf(message, sizeof (message), "do_play_file: %d/%d", folder, file);
+    snprintf(message, sizeof (message), "running: play_file %d/%d", folder, file);
     debugln(message);
     // This assumes the DFPlayer is in file mode #2 (microSD card 
     // with directories 01-99, with filenames 001.mp3-255.mp3).
@@ -393,19 +406,19 @@ class DFPlayerAsync {
   }
 
   void do_pause() {
-    debugln("do_pause: sending pause cmd");
+    debugln("running: pause");
     dfplayer_.send_cmd(0x1a, 0, 1);
     post_command_delay();
   }
 
   void do_unpause() {
-    debugln("do_unpause: sending unpause cmd");
+    debugln("running: unpause");
     dfplayer_.send_cmd(0x1a, 0, 0);
     post_command_delay();
   }
 
   void do_stop() {
-    debugln("do_stop: sending stop cmd");
+    debugln("running: stop");
     dfplayer_.send_cmd(0x16, 0, 0);
     post_command_delay();
   }
@@ -415,14 +428,14 @@ class DFPlayerAsync {
   }
 
   void wait_for_busy_to_set() {
-    debugln("wait_for_busy_to_set");
+    debugln("running: wait_for_busy_to_set");
     action_.invoke_when_ready(
       /* ready */ [this]() { return dfplayer_.is_busy(); },
       /* call  */ [this]() { wait_for_busy_to_clear(); });
   }
 
   void wait_for_busy_to_clear() {
-    debugln("wait_for_busy_to_clear");
+    debugln("running: wait_for_busy_to_clear");
     int deadline = millis() + kMinBusyDelay;
     action_.invoke_when_ready(
       /* ready */ [this]() { return !dfplayer_.is_busy(); },
@@ -430,7 +443,7 @@ class DFPlayerAsync {
   }
 
   void busy_is_now_clear(int deadline) {
-    debugln("busy_is_now_clear");
+    debugln("running: busy_is_now_clear");
     if (millis() < deadline) {
       // Busy was cleared too quickly; try again.
       wait_for_busy_to_set();
@@ -446,6 +459,7 @@ class DFPlayerAsync {
   DFPlayerImpl dfplayer_;
   std::queue<std::function<void(void)>> work_queue_;
   DelayedAction action_;
+  bool debug_enabled_;
 };
 
 // ---------------------------------------------------------------------
@@ -547,30 +561,24 @@ class Firefly {
 
     float new_counter = b_.counter + b_.speed * b_.sign;
     if (static_cast<int>(new_counter) == b_.pwm_value) {
+      // No PWM update needed.
       b_.counter = new_counter;
-    } else {
-      if (new_counter >= 256.0) {
-        b_.sign = -1;
-        new_counter = b_.counter - b_.speed;
-      } else if (new_counter < 0.0) {
-        b_.sign = 0;
-        new_counter = 0.0;
-
-        // Generate a random number in the range [-1.0, 1.0).
-        const float scale = 65536.0;
-        float rand = static_cast<float>(random(scale * 2)) / scale - 1.0;
-
-        float jitter = static_cast<float>(b_.jitter) * rand;
-        int delay_counter = b_.delay + static_cast<int>(jitter);
-        if (delay_counter < 0) {
-          delay_counter = 0;
-        }
-        b_.delay_counter = delay_counter;
-      }
-      b_.counter = new_counter;
-      b_.pwm_value = static_cast<int>(new_counter);
-      analogWrite(pin_, b_.pwm_value);
+      return;
     }
+
+    if (new_counter >= 256.0) {
+      // Brightness has hit max; time to decrease.
+      b_.sign = -1;
+      new_counter = b_.counter - b_.speed;
+    } else if (new_counter < 0.0) {
+      // Brightness has hit min; shut off light and pause.
+      b_.sign = 0;
+      new_counter = 0.0;
+      b_.delay_counter = generate_random(b_.delay, b_.jitter);
+    }
+    b_.counter = new_counter;
+    b_.pwm_value = static_cast<int>(new_counter);
+    analogWrite(pin_, b_.pwm_value);
   }
 
  private:
@@ -634,13 +642,18 @@ struct CricketConfig {
   int shutdown_delay_msec;
   int initial_volume;
   bool debug_enabled;
+
+  String ssid;
+  String pass;
+  int port;
 };
 
 class Cricket {
  public:
   Cricket(const CricketConfig& config) :
+      net_(config.ssid, config.pass, config.port, config.debug_enabled),
       dfplayer_(config.dfplayer_tx_pin, config.dfplayer_rx_pin,
-        config.dfplayer_busy_pin),
+        config.dfplayer_busy_pin, config.debug_enabled),
       mosfet_(config.mosfet_pin, config.mosfet_gpio_num),
       firefly_(config.firefly_pin),
       battery_(config.battery_pin),
@@ -648,88 +661,93 @@ class Cricket {
       shutdown_delay_msec_(config.shutdown_delay_msec),
       debug_enabled_(config.debug_enabled) {}
 
-  void setup(Net& net) {
-    net.on("/ping", [this, &net]() {
+  void setup() {
+    net_.setup();
+
+    net_.on("/ping", [this]() {
       ping();
-      net.sendSuccess();
+      net_.sendSuccess();
     });
 
-    net.on("/play", [this, &net]() {
-      int folder = net.arg("folder").toInt();
-      int file = net.arg("file").toInt();
+    net_.on("/play", [this]() {
+      char msg[80];
+      int folder = net_.arg("folder").toInt();
+      int file = net_.arg("file").toInt();
       if (folder < 1 || folder > 99) {
-        net.sendFailure("folder must be between 1 and 99 inclusive");
+        snprintf(msg, sizeof (msg), "folder %d must be between 1 and 99 inclusive", folder);
+        net_.sendFailure(msg);
       } else if (file < 1 || file > 255) {
-        net.sendFailure("file must be between 1 and 255 inclusive");
+        snprintf(msg, sizeof (msg), "file %d must be between 1 and 255 inclusive", file);
+        net_.sendFailure(msg);
       } else {
         play(folder, file);
-        char msg[80];
         // the server code expects the volume to immediately follow a colon
         snprintf(msg, sizeof (msg), "playing at volume:%d", volume_);
-        net.sendSuccess(msg);
+        net_.sendSuccess(msg);
       }
     });
 
-    net.on("/setvolume", [this, &net]() {
-      int vol = net.arg("volume").toInt();
-      String persist = net.arg("persist");
+    net_.on("/setvolume", [this]() {
+      int vol = net_.arg("volume").toInt();
+      String persist = net_.arg("persist");
       if (vol < 0 || vol > 48) {
-        net.sendFailure("volume must be between 0 and 48 inclusive");
+        net_.sendFailure("volume must be between 0 and 48 inclusive");
       } else if (persist != "" && persist != "true" && persist != "false") {
-        net.sendFailure("persist must be either \"true\" or \"false\"");
+        net_.sendFailure("persist must be either \"true\" or \"false\"");
       } else {
         if (!set_volume(vol, persist == "true")) {
-          net.sendFailure();
+          net_.sendFailure();
         } else {
-          net.sendSuccess();
+          net_.sendSuccess();
         }
       }
     });
 
-    net.on("/blink", [this, &net]() {
-      float speed = net.arg("speed").toFloat();
-      int delay = net.arg("delay").toInt();
-      int jitter = net.arg("jitter").toInt();
-      int reps = net.arg("reps").toInt();
+    net_.on("/blink", [this]() {
+      float speed = net_.arg("speed").toFloat();
+      int delay = net_.arg("delay").toInt();
+      int jitter = net_.arg("jitter").toInt();
+      int reps = net_.arg("reps").toInt();
       if (speed < 0.001) {
-        net.sendFailure("speed must be faster");
+        net_.sendFailure("speed must be faster");
       } else if (reps <= 0) {
-        net.sendFailure("reps must be a positive number");
+        net_.sendFailure("reps must be a positive number");
       } else {
         add_blink(speed, delay, jitter, reps);
-        net.sendSuccess();
+        net_.sendSuccess();
       }
     });
 
-    net.on("/pause", [this, &net]() {
+    net_.on("/pause", [this]() {
       pause();
-      net.sendSuccess();
+      net_.sendSuccess();
     });
 
-    net.on("/unpause", [this, &net]() {
+    net_.on("/unpause", [this]() {
       unpause();
-      net.sendSuccess();
+      net_.sendSuccess();
     });
 
-    net.on("/stop", [this, &net]() {
+    net_.on("/stop", [this]() {
       stop();
-      net.sendSuccess();
+      net_.sendSuccess();
     });
 
-    net.on("/battery", [this, &net]() {
-      net.sendSuccess(String(read_battery_voltage()));
+    net_.on("/battery", [this]() {
+      net_.sendSuccess(String(read_battery_voltage()));
     });
 
-    net.on("/soundpending", [this, &net]() {
-      net.sendSuccess(String(sound_pending()));
+    net_.on("/soundpending", [this]() {
+      net_.sendSuccess(String(sound_pending()));
     });
 
-    net.on("/lightpending", [this, &net]() {
-      net.sendSuccess(String(light_pending()));
+    net_.on("/lightpending", [this]() {
+      net_.sendSuccess(String(light_pending()));
     });
   }
 
   void loop() {
+    net_.loop();
     dfplayer_.loop();
     firefly_.loop();
 
@@ -748,41 +766,39 @@ class Cricket {
 
   // this only plays async
   void play(int folder, int file) {
-    debugln("cricket: play");
     dfplayer_ensure_powered_on();
-    dfplayer_.play_file(folder, file);
+    dfplayer_.enqueue_play_file(folder, file);
     dfplayer_extend_lifetime();
   }
 
   bool set_volume(int volume, bool persist) {
-    debugln("cricket: set_volume");
     dfplayer_ensure_powered_on();
-    if (!dfplayer_.volume(volume)) return false;
+    if (!dfplayer_.enqueue_volume(volume)) return false;
     if (persist) volume_ = volume;
     dfplayer_extend_lifetime();
     return true;
   }
 
   void add_blink(float speed, int delay, int jitter, int reps) {
-    debugln("cricket: blink");
+    debugln("cricket: adding blink to queue");
     firefly_.add_blink(speed, delay, jitter, reps);
   }
 
   void pause() {
     dfplayer_ensure_powered_on();
-    dfplayer_.pause();
+    dfplayer_.enqueue_pause();
     dfplayer_extend_lifetime();
   }
 
   void unpause() {
     dfplayer_ensure_powered_on();
-    dfplayer_.unpause();
+    dfplayer_.enqueue_unpause();
     dfplayer_extend_lifetime();
   }
 
   void stop() {
     dfplayer_ensure_powered_on();
-    dfplayer_.stop();
+    dfplayer_.enqueue_stop();
     dfplayer_extend_lifetime();
   }
 
@@ -806,20 +822,18 @@ class Cricket {
 
  private:
   template <typename T> void debug(T t) {
-    if (!debug_enabled_) return;
-    Serial.print(t);
+    if (debug_enabled_) Serial.print(t);
   }
   template <typename T> void debugln(T t) {
-    if (!debug_enabled_) return;
-    Serial.println(t);
+    if (debug_enabled_) Serial.println(t);
   }
 
   void dfplayer_ensure_powered_on() {
     if (dfplayer_powered_on()) return;
 
     mosfet_.on();
-    dfplayer_.init();
-    dfplayer_.volume(volume_);
+    dfplayer_.enqueue_init();
+    dfplayer_.enqueue_volume(volume_);
     dfplayer_extend_lifetime();
   }
 
@@ -842,6 +856,7 @@ class Cricket {
     shutdown_deadline_ = 0;
   }
 
+  Net net_;
   DFPlayerAsync dfplayer_;
   Mosfet mosfet_;
   Firefly firefly_;
@@ -866,25 +881,20 @@ const CricketConfig cricket_config = {
 
   .shutdown_delay_msec = 10000,
   .initial_volume = 0x8, // 0x30 = max
+
+  .ssid = "SSID",
+  .pass = "PASSWORD",
+
+  .port = 80,
+
   .debug_enabled = true,
 };
 
 Cricket cricket(cricket_config);
 
-const NetConfig net_config = {
-  .ssid = "SSID",
-  .pass = "PASSWORD",
-
-  .port = 80,
-  .debug_enabled = true,
-};
-
-Net net(net_config);
-
 void setup() {
   Serial.begin(115200);
-  net.setup();
-  cricket.setup(net);
+  cricket.setup();
 }
 
 // This doesn't actually preserve WiFi connections :(
@@ -897,7 +907,6 @@ void sleep(int msec) {
 }
 
 void loop() {
-  net.loop();
   cricket.loop();
   delay(1);
 }
