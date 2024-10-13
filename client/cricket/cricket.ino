@@ -16,8 +16,8 @@ static int generate_random(int mean, int var) {
   const float scale = 65536.0;
   float rand = static_cast<float>(random(scale * 2)) / scale - 1.0;
 
-  float j = static_cast<float>(jitter) * rand;
-  int d = delay + static_cast<int>(j);
+  float j = static_cast<float>(var) * rand;
+  int d = mean + static_cast<int>(j);
   if (d < 0) {
     d = 0;
   }
@@ -172,12 +172,12 @@ class Net {
 };
 
 // ---------------------------------------------------------------------
-// DFPlayerImpl actually does actions to the DFPlayer.
+// DFPlayer actually does actions to the DFPlayer.
 
-class DFPlayerImpl {
+class DFPlayer {
  public:
   // The pins here are pins on the ESP32.
-  DFPlayerImpl(byte tx_pin, byte rx_pin, byte busy_pin) :
+  DFPlayer(byte tx_pin, byte rx_pin, byte busy_pin) :
       tx_pin_(tx_pin), rx_pin_(rx_pin), busy_pin_(busy_pin), serial_(1) {
     pinMode(busy_pin_, INPUT);
   }
@@ -243,121 +243,289 @@ class DFPlayerImpl {
 };
 
 // ---------------------------------------------------------------------
-// An action that should be taken at a specified point.
+// A command to be executed by DFPlayer.
+// Includes machinery for maintaining a state machine.
 
-class DelayedAction {
+class DFCmd {
  public:
-  void invoke_when_ready(const std::function<bool(void)>& ready,
-      const std::function<void(void)>& func_to_invoke) {
-    ready_ = ready;
-    fn_ = func_to_invoke;
+  template <typename S> DFCmd(S state) :
+    state_(state), just_entered_state_(true), deadline_(0),
+    debug_enabled_(true) /* XXX */ {}
+
+  virtual String description() const = 0;
+  virtual bool loop(DFPlayer&) = 0;
+
+ protected:
+  template <typename S> void NewState(S s) {
+    state_ = static_cast<int>(s);
+    just_entered_state_ = true;
+  }
+  int GetState() {
+    if (just_entered_state_ && debug_enabled_) {
+      char message[80];
+      snprintf(message, sizeof (message),
+        "%s: entering state %d", description().c_str(), state_);
+      Serial.println(message);
+    }
+    just_entered_state_ = false;
+    return state_;
   }
 
-  void invoke_after(int delay_msec,
-      const std::function<void(void)>& func_to_invoke) {
-    const int deadline = millis() + delay_msec;
-    invoke_when_ready(
-      [deadline]() { return millis() >= deadline; }, func_to_invoke);
+  void SetDeadlineIfUnset(int delay) {
+    if (deadline_ == 0) deadline_ = millis() + delay;
+  }
+  void ClearDeadline() {
+    deadline_ = 0;
+  }
+  const bool DeadlinePassed() {
+    return millis() >= deadline_;
   }
 
-  void act() {
-    if (!ready_()) return;
-    std::function<void(void)> call = fn_;
-    ready_ = nullptr;
-    fn_ = nullptr;
-    call();
+  bool debug_enabled_;
+  int state_;
+  bool just_entered_state_;
+  int deadline_;
+};
+
+// Enqueue this after power is provided to DFPlayer.
+class InitCmd : public DFCmd {
+ public:
+  InitCmd() : DFCmd(kStartSerial) {}
+
+  String description() const {
+    return "DFPlayer init";
   }
 
-  bool pending() { return ready_ != nullptr; }
+  bool loop(DFPlayer& dfplayer) {
+    bool keep_going = true;
 
-  void cancel() {
-    ready_ = nullptr;
-    fn_ = nullptr;
+    switch (GetState()) {
+    case kStartSerial:
+      dfplayer.init();
+      NewState(kWaitForSerialInit);
+      break;
+
+    case kWaitForSerialInit:
+      SetDeadlineIfUnset(kPostSerialInitDelay);
+      if (DeadlinePassed()) {
+        ClearDeadline();
+        NewState(kSendInitParams);
+      }
+      break;
+
+    case kSendInitParams:
+      // Send request for initialization parameters, and discard them.
+      dfplayer.send_cmd(0x3f, 0x00, 0x00);
+      dfplayer.drain_serial();
+      NewState(kWaitForSerialDrained);
+      break;
+
+    case kWaitForSerialDrained:
+      SetDeadlineIfUnset(kPostCommandDelay);
+      if (DeadlinePassed()) {
+        ClearDeadline();
+        keep_going = false;
+      }
+      break;
+    }
+
+    return keep_going;
   }
 
  private:
-  std::function<bool(void)> ready_;
-  std::function<void(void)> fn_;
+  const int kPostSerialInitDelay = 1000; // XXX probably don't need this much
+  const int kPostCommandDelay = 30;
+
+  enum InitState {
+    kStartSerial,
+    kWaitForSerialInit,
+    kSendInitParams,
+    kWaitForSerialDrained,
+  };
+};
+
+class PlayCmd : public DFCmd {
+ public:
+  PlayCmd(int folder, int file, int reps, int delay_msec, int jitter_msec) :
+    DFCmd(kPlayFile),
+    folder_(folder), file_(file),
+    reps_(reps), delay_msec_(delay_msec), jitter_msec_(jitter_msec) {}
+
+  String description() const {
+    char message[80];
+    snprintf(message, sizeof (message), "play %d/%d", folder_, file_);
+    return String(message);
+  }
+
+  bool loop(DFPlayer& dfplayer) {
+    bool keep_going = true;
+
+    switch (GetState()) {
+    case kPlayFile:
+      // This assumes the DFPlayer is in file mode #2 (microSD card 
+      // with directories 01-99, with filenames 001.mp3-255.mp3).
+      dfplayer.send_cmd(0x0f, folder_, file_);
+      NewState(kWaitForBusyToSet);
+      break;
+
+    case kWaitForBusyToSet:
+      if (dfplayer.is_busy()) {
+        NewState(kWaitForBusyToClear);
+      }
+      break;
+
+    case kWaitForBusyToClear:
+      SetDeadlineIfUnset(kMinBusyDelay);
+      if (!dfplayer.is_busy()) {
+        NewState(kBusyIsNowClear);
+      }
+      break;
+
+    case kBusyIsNowClear:
+      if (!DeadlinePassed()) {
+        ClearDeadline();
+        NewState(kWaitForBusyToSet);
+      } else {
+        ClearDeadline();
+        if (--reps_ > 0) {
+          NewState(kPauseBetweenPlays);
+        } else {
+          keep_going = false;
+        }
+      }
+      break;
+
+    case kPauseBetweenPlays:
+      SetDeadlineIfUnset(generate_random(delay_msec_, jitter_msec_));
+      if (DeadlinePassed()) {
+        ClearDeadline();
+        NewState(kPlayFile);
+      }
+      break;
+    }
+
+    return keep_going;
+  }
+
+ private:
+  int folder_;
+  int file_;
+  int reps_;
+  int delay_msec_;
+  int jitter_msec_;
+
+  // If "busy" is not set for at least this long after playing a file,
+  // it will look for non-busy and then busy again.
+  // XXX: this will cause a hang if any files are <200 msec
+  const int kMinBusyDelay = 200;
+
+  enum PlayState {
+    kPlayFile,
+    kWaitForBusyToSet,
+    kWaitForBusyToClear,
+    kBusyIsNowClear,
+    kPauseBetweenPlays,
+  };
+};
+
+class BasicCmd : public DFCmd {
+ public:
+  BasicCmd(String name, int cmd, int arg1, int arg2) :
+    DFCmd(kExecute),
+    name_(name), cmd_(cmd), arg1_(arg1), arg2_(arg2) {}
+
+  String description() const {
+    return name_;
+  }
+
+  bool loop(DFPlayer& dfplayer) {
+    bool keep_going = true;
+
+    switch (GetState()) {
+    case kExecute:
+      dfplayer.send_cmd(cmd_, arg1_, arg2_);
+      NewState(kWaitForPostCommand);
+      break;
+    case kWaitForPostCommand:
+      SetDeadlineIfUnset(kPostCommandDelay);
+      if (DeadlinePassed()) {
+        ClearDeadline();
+        keep_going = false;
+      }
+      break;
+    }
+
+    return keep_going;
+  }
+
+ private:
+  String name_;
+  int cmd_;
+  int arg1_;
+  int arg2_;
+
+  const int kPostCommandDelay = 30; // 20 is not enough (for volume at least)
+
+  enum PlayState {
+    kExecute,
+    kWaitForPostCommand,
+  };
+};
+
+class VolumeCmd : public BasicCmd {
+ public:
+  VolumeCmd(int level) :
+    BasicCmd(String("volume ") + String(level),
+             0x06, 0x00, (level > 0x30 ? 0x30 : level)) {}
+};
+
+class PauseCmd : public BasicCmd {
+ public:
+  PauseCmd() : BasicCmd("pause", 0x1a, 0x00, 0x01) {}
+};
+
+class UnpauseCmd : public BasicCmd {
+ public:
+  UnpauseCmd() : BasicCmd("unpause", 0x1a, 0x00, 0x00) {}
+};
+
+class StopCmd : public BasicCmd {
+ public:
+  StopCmd() : BasicCmd("stop", 0x16, 0x00, 0x00) {}
 };
 
 // ---------------------------------------------------------------------
-// A version of DFPlayer that executes its commands asynchronously.
-// It relies on its owner to invoke loop() periodically to make progress.
+// A queue of commands to be executed by DFPlayer.
 
-class DFPlayerAsync {
+class DFPlayerQueue {
  public:
-  DFPlayerAsync(byte tx_pin, byte rx_pin, byte busy_pin, bool debug_enabled) :
-      dfplayer_(tx_pin, rx_pin, busy_pin), debug_enabled_(debug_enabled) {}
+  DFPlayerQueue(bool debug_enabled) : debug_enabled_(debug_enabled) {}
 
-  // Call this after power is provided to DFPlayer.
-  void enqueue_init() {
-    debugln("pushing: DFPlayer init");
-    work_queue_.push([this]() { do_init_step1(); });
-    loop();
+  void add(std::unique_ptr<DFCmd> cmd) {
+    char message[80];
+    snprintf(message, sizeof (message), "enqueue: %s", cmd->description());
+    debugln(message);
+    work_queue_.push(std::move(cmd));
   }
 
-  bool enqueue_volume(byte level) {
-    char buf[80];
-    snprintf(buf, sizeof (buf), "pushing: volume %d", level);
-    debugln(buf);
-    if (level > 0x30) return false;
-    work_queue_.push([this, level]() { do_volume(level); });
-    loop();
-    return true;
-  }
-
-  void enqueue_play_file(byte folder, byte file) {
-    char buf[80];
-    snprintf(buf, sizeof (buf), "pushing: play %d/%d", folder, file);
-    debugln(buf);
-    work_queue_.push([this, folder, file]() { do_play_file(folder, file); });
-    loop();
-  }
-
-  void enqueue_pause() {
-    debugln("pushing: pause");
-    work_queue_.push([this]() { do_pause(); });
-    loop();
-  }
-
-  void enqueue_unpause() {
-    debugln("pushing: unpause");
-    work_queue_.push([this]() { do_unpause(); });
-    loop();
-  }
-
-  void enqueue_stop() {
-    debugln("pushing: stop");
-    work_queue_.push([this]() { do_stop(); });
-    loop();
+  // Take an action, if possible.
+  void loop(DFPlayer& dfplayer) {
+    if (work_queue_.empty()) return;
+    DFCmd& cmd = *work_queue_.front();
+    if (!cmd.loop(dfplayer)) {
+      work_queue_.pop();
+    }
   }
 
   // Indicates how much work there is to be done.
-  unsigned int work_pending() {
-    return work_queue_.size() + (action_.pending() ? 1 : 0);
+  unsigned int size() {
+    return work_queue_.size();
   }
 
   // Call this when power is about to be removed.
   // This executes synchronously.
   void fini() {
-    debugln("DFPlayer fini");
-    action_.cancel();
-    dfplayer_.fini();
-    drain_work_queue();
-  }
-
-  // Take an action, if possible.
-  void loop() {
-    if (action_.pending()) {
-      action_.act();
-      return;
-    }
-    if (!work_queue_.empty()) {
-      debugln("popping");
-      std::function<void(void)> fn = work_queue_.front();
-      work_queue_.pop();
-      fn();
-    }
+    std::queue<std::unique_ptr<DFCmd>>().swap(work_queue_);
   }
 
  private:
@@ -365,102 +533,10 @@ class DFPlayerAsync {
     if (debug_enabled_) Serial.println(s);
   }
 
-  const int kPostSerialInitDelay = 1000; // XXX probably don't need this much
-  const int kPostCommandDelay = 30; // 20 is not enough (for volume at least)
-
-  // If "busy" is not set for at least this long after playing a file,
-  // it will look for non-busy and then busy again.
-  // XXX: this will cause a hang if any files are <200 msec
-  const int kMinBusyDelay = 200;
-
-  void do_init_step1() {
-    debugln("running: init_step1 (start serial comms)");
-    dfplayer_.init();
-    action_.invoke_after(kPostSerialInitDelay, [this]() { do_init_step2(); });
-  }
-
-  void do_init_step2() {
-    debugln("running: init_step2 (send init params, wait for reply)");
-    // Send request for initialization parameters, and discard them.
-    dfplayer_.send_cmd(0x3f, 0x00, 0x00);
-    dfplayer_.drain_serial();
-    post_command_delay();
-  }
-
-  void do_volume(byte level) {
-    char message[80];
-    snprintf(message, sizeof (message), "running: volume %d", level);
-    debugln(message);
-    dfplayer_.send_cmd(0x06, 0x00, level);
-    post_command_delay();
-  }
-
-  void do_play_file(byte folder, byte file) {
-    char message[80];
-    snprintf(message, sizeof (message), "running: play_file %d/%d", folder, file);
-    debugln(message);
-    // This assumes the DFPlayer is in file mode #2 (microSD card 
-    // with directories 01-99, with filenames 001.mp3-255.mp3).
-    dfplayer_.send_cmd(0x0f, folder, file);
-    wait_for_busy_to_set();
-  }
-
-  void do_pause() {
-    debugln("running: pause");
-    dfplayer_.send_cmd(0x1a, 0, 1);
-    post_command_delay();
-  }
-
-  void do_unpause() {
-    debugln("running: unpause");
-    dfplayer_.send_cmd(0x1a, 0, 0);
-    post_command_delay();
-  }
-
-  void do_stop() {
-    debugln("running: stop");
-    dfplayer_.send_cmd(0x16, 0, 0);
-    post_command_delay();
-  }
-
-  void post_command_delay() {
-    action_.invoke_after(kPostCommandDelay, [this]() { loop(); });
-  }
-
-  void wait_for_busy_to_set() {
-    debugln("running: wait_for_busy_to_set");
-    action_.invoke_when_ready(
-      /* ready */ [this]() { return dfplayer_.is_busy(); },
-      /* call  */ [this]() { wait_for_busy_to_clear(); });
-  }
-
-  void wait_for_busy_to_clear() {
-    debugln("running: wait_for_busy_to_clear");
-    int deadline = millis() + kMinBusyDelay;
-    action_.invoke_when_ready(
-      /* ready */ [this]() { return !dfplayer_.is_busy(); },
-      /* call  */ [this, deadline]() { busy_is_now_clear(deadline); });
-  }
-
-  void busy_is_now_clear(int deadline) {
-    debugln("running: busy_is_now_clear");
-    if (millis() < deadline) {
-      // Busy was cleared too quickly; try again.
-      wait_for_busy_to_set();
-    } else {
-      loop();
-    }
-  }
-
-  void drain_work_queue() {
-    std::queue<std::function<void(void)>>().swap(work_queue_);
-  }
-
-  DFPlayerImpl dfplayer_;
-  std::queue<std::function<void(void)>> work_queue_;
-  DelayedAction action_;
+  std::queue<std::unique_ptr<DFCmd>> work_queue_;
   bool debug_enabled_;
 };
+
 
 // ---------------------------------------------------------------------
 // Mosfet controls power to the DFPlayer.
@@ -511,7 +587,7 @@ class Firefly {
     pinMode(pin_, OUTPUT);
   }
 
-  void add_blink(float speed, int delay, int jitter, int reps) {
+  void add_blink(float speed, int reps, int delay, int jitter) {
     if (speed < 0.01) {
       speed = 0.01;
     } else if (speed >= 255.0) {
@@ -526,9 +602,9 @@ class Firefly {
 
     blinks_.push(BlinkSet {
       .speed = speed,
+      .reps = reps,
       .delay = delay,
       .jitter = jitter,
-      .reps = reps,
       .sign = 1,
       .counter = 0.0,
       .delay_counter = 0,
@@ -584,9 +660,9 @@ class Firefly {
  private:
   struct BlinkSet {
     float speed; // how much to increment the PWM value each time
+    int reps;    // how many times to blink it
     int delay;   // how much to wait between blinks
     int jitter;  // the max amount that "delay" can vary each time
-    int reps;    // how many times to blink it
 
     int sign;      // +1 for brighter, -1 for dimmer, 0 for delay
     float counter;
@@ -641,11 +717,13 @@ struct CricketConfig {
 
   int shutdown_delay_msec;
   int initial_volume;
-  bool debug_enabled;
 
   String ssid;
   String pass;
+
   int port;
+
+  bool debug_enabled;
 };
 
 class Cricket {
@@ -653,7 +731,8 @@ class Cricket {
   Cricket(const CricketConfig& config) :
       net_(config.ssid, config.pass, config.port, config.debug_enabled),
       dfplayer_(config.dfplayer_tx_pin, config.dfplayer_rx_pin,
-        config.dfplayer_busy_pin, config.debug_enabled),
+        config.dfplayer_busy_pin),
+      dfqueue_(config.debug_enabled),
       mosfet_(config.mosfet_pin, config.mosfet_gpio_num),
       firefly_(config.firefly_pin),
       battery_(config.battery_pin),
@@ -673,6 +752,10 @@ class Cricket {
       char msg[80];
       int folder = net_.arg("folder").toInt();
       int file = net_.arg("file").toInt();
+      int reps = net_.arg("reps").toInt();
+      int delay = net_.arg("delay").toInt();
+      int jitter = net_.arg("jitter").toInt();
+
       if (folder < 1 || folder > 99) {
         snprintf(msg, sizeof (msg), "folder %d must be between 1 and 99 inclusive", folder);
         net_.sendFailure(msg);
@@ -680,7 +763,8 @@ class Cricket {
         snprintf(msg, sizeof (msg), "file %d must be between 1 and 255 inclusive", file);
         net_.sendFailure(msg);
       } else {
-        play(folder, file);
+        if (reps == 0) reps = 1;
+        play(folder, file, reps, delay, jitter);
         // the server code expects the volume to immediately follow a colon
         snprintf(msg, sizeof (msg), "playing at volume:%d", volume_);
         net_.sendSuccess(msg);
@@ -695,11 +779,8 @@ class Cricket {
       } else if (persist != "" && persist != "true" && persist != "false") {
         net_.sendFailure("persist must be either \"true\" or \"false\"");
       } else {
-        if (!set_volume(vol, persist == "true")) {
-          net_.sendFailure();
-        } else {
-          net_.sendSuccess();
-        }
+        set_volume(vol, persist == "true");
+        net_.sendSuccess();
       }
     });
 
@@ -713,7 +794,7 @@ class Cricket {
       } else if (reps <= 0) {
         net_.sendFailure("reps must be a positive number");
       } else {
-        add_blink(speed, delay, jitter, reps);
+        add_blink(speed, reps, delay, jitter);
         net_.sendSuccess();
       }
     });
@@ -748,10 +829,10 @@ class Cricket {
 
   void loop() {
     net_.loop();
-    dfplayer_.loop();
+    dfqueue_.loop(dfplayer_);
     firefly_.loop();
 
-    if (dfplayer_.work_pending()) {
+    if (dfqueue_.size() > 0) {
       dfplayer_extend_lifetime();
     }
     if (dfplayer_should_power_off()) {
@@ -764,50 +845,47 @@ class Cricket {
     dfplayer_extend_lifetime();
   }
 
-  // this only plays async
-  void play(int folder, int file) {
+  void play(int folder, int file, int reps, int delay, int jitter) {
     dfplayer_ensure_powered_on();
-    dfplayer_.enqueue_play_file(folder, file);
+    dfqueue_.add(std::make_unique<PlayCmd>(folder, file, reps, delay, jitter));
     dfplayer_extend_lifetime();
   }
 
-  bool set_volume(int volume, bool persist) {
+  void set_volume(int volume, bool persist) {
     dfplayer_ensure_powered_on();
-    if (!dfplayer_.enqueue_volume(volume)) return false;
+    dfqueue_.add(std::make_unique<VolumeCmd>(volume));
     if (persist) volume_ = volume;
     dfplayer_extend_lifetime();
-    return true;
   }
 
-  void add_blink(float speed, int delay, int jitter, int reps) {
+  void add_blink(float speed, int reps, int delay, int jitter) {
     debugln("cricket: adding blink to queue");
-    firefly_.add_blink(speed, delay, jitter, reps);
+    firefly_.add_blink(speed, reps, delay, jitter);
   }
 
   void pause() {
     dfplayer_ensure_powered_on();
-    dfplayer_.enqueue_pause();
+    dfqueue_.add(std::make_unique<PauseCmd>());
     dfplayer_extend_lifetime();
   }
 
   void unpause() {
     dfplayer_ensure_powered_on();
-    dfplayer_.enqueue_unpause();
+    dfqueue_.add(std::make_unique<UnpauseCmd>());
     dfplayer_extend_lifetime();
   }
 
   void stop() {
     dfplayer_ensure_powered_on();
-    dfplayer_.enqueue_stop();
+    dfqueue_.add(std::make_unique<StopCmd>());
     dfplayer_extend_lifetime();
   }
 
   float read_battery_voltage() {
     return battery_.read_voltage();
   }
-
   unsigned int sound_pending() {
-    return dfplayer_.work_pending();
+    return dfqueue_.size();
   }
   unsigned int light_pending() {
     return firefly_.work_pending();
@@ -832,8 +910,8 @@ class Cricket {
     if (dfplayer_powered_on()) return;
 
     mosfet_.on();
-    dfplayer_.enqueue_init();
-    dfplayer_.enqueue_volume(volume_);
+    dfqueue_.add(std::make_unique<InitCmd>());
+    dfqueue_.add(std::make_unique<VolumeCmd>(volume_));
     dfplayer_extend_lifetime();
   }
 
@@ -847,17 +925,20 @@ class Cricket {
 
   bool dfplayer_should_power_off() {
     return dfplayer_powered_on() && shutdown_deadline_ <= millis() &&
-      dfplayer_.work_pending() == 0;
+      dfqueue_.size() == 0;
   }
 
   void dfplayer_power_off() {
+    debugln("DFPlayer fini");
+    dfqueue_.fini();
     dfplayer_.fini();
     mosfet_.off();
     shutdown_deadline_ = 0;
   }
 
   Net net_;
-  DFPlayerAsync dfplayer_;
+  DFPlayer dfplayer_;
+  DFPlayerQueue dfqueue_;
   Mosfet mosfet_;
   Firefly firefly_;
   Battery battery_;
@@ -882,8 +963,8 @@ const CricketConfig cricket_config = {
   .shutdown_delay_msec = 10000,
   .initial_volume = 0x8, // 0x30 = max
 
-  .ssid = "SSID",
-  .pass = "PASSWORD",
+  .ssid = "sparkles",
+  .pass = "sash etching wrap classify",
 
   .port = 80,
 
