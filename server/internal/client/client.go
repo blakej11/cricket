@@ -28,10 +28,17 @@ func Del(id types.ID) {
 	enqueueAdminMessage(&delClientMessage{id: id})
 }
 
-// Request that a client perform some action.
+// Request that some clients perform an action.
+func Action(ids []types.ID, ctx context.Context, req clientRequest, earliest time.Time) {
+	for _, id := range ids {
+		action(id, ctx, req, earliest)
+	}
+}
+
+// Request that a single client perform some action.
 // The caller must have already obtained an appropriate lease for this client.
 // Errors are logged in the client, but not returned.
-func Action(id types.ID, ctx context.Context, req clientRequest, earliest time.Time) {
+func action(id types.ID, ctx context.Context, req clientRequest, earliest time.Time) {
 	c, ok := data.clients[id]
 	if !ok {
 		log.Fatalf("can't execute request on nonexistent client %q", id)
@@ -59,8 +66,14 @@ type adminMessage interface {
 }
 
 const (
-	transientDelay = time.Second
+	// Time between attempts to DrainQueue in case of network failure.
+	transientDelay = 5 * time.Second
+
+	// Time between voltage updates.
 	voltageUpdateDelay = 60 * time.Second
+
+	// Time between getURL() calls to a given client, to avoid "connection reset by peer".
+	postGetURLDelay = 30 * time.Millisecond
 )
 
 func init() {
@@ -96,12 +109,13 @@ type addClientMessage struct {
 func (r *addClientMessage) handle() {
 	if _, ok := data.clients[r.id]; ok {
 		c := data.clients[r.id]
-		if !c.suspended {
-			log.Infof("got new add from existing client %q (%q, loc %q)", r.id, c.name, c.physLocation)
+		if c.suspended {
+			c.suspended = false
+			lease.Resume(r.id)
+			log.Infof("%v resuming client", *c)
+		} else {
+			log.Infof("%v got new add from existing client", *c)
 		}
-		c.suspended = false
-		lease.Resume(r.id)
-		log.Infof("resuming client %q (%q, loc %q)", r.id, c.name, c.physLocation)
 		return
 	}
 
@@ -111,7 +125,6 @@ func (r *addClientMessage) handle() {
 		physLocation = conf.PhysLocation
 		name = conf.Name
 	}
-	log.Infof("adding new client %q (%q, loc %q)", r.id, name, physLocation)
 
 	c := &client{
 		id:		r.id,
@@ -128,6 +141,7 @@ func (r *addClientMessage) handle() {
 		targetVolume:	data.defaultVolume,
 	}
 	data.clients[r.id] = c
+	log.Infof("%v adding new client", *c)
 
 	c.start()
 
@@ -145,7 +159,7 @@ func (r *delClientMessage) handle() {
 	c := data.clients[r.id]
 	c.suspended = true
 	lease.Suspend(r.id)
-	log.Infof("suspending client %q (%q, loc %q)", r.id, c.name, c.physLocation)
+	log.Infof("%v suspending client", *c)
 }
 
 // ---------------------------------------------------------------------
@@ -153,9 +167,9 @@ func (r *delClientMessage) handle() {
 // client represents a single client.
 type client struct {
 	id		types.ID
+        name		string
         netLocation	types.NetLocation
 	physLocation	types.PhysLocation
-        name		string
 
 	heap		*clientMessageHeap
 
@@ -167,6 +181,7 @@ type client struct {
 
         creation        time.Time
         lastPing        time.Time
+	nextGetURL	time.Time
         lastSuccessCmd  time.Time
         lastFailureCmd  time.Time
         lastVoltageUpdate	time.Time
@@ -174,6 +189,10 @@ type client struct {
 	suspended	bool
 
         targetVolume    int
+}
+
+func (c client) String() string {
+	return fmt.Sprintf("[%s (%q, %v, %v)]", c.id, c.name, c.netLocation, c.physLocation)
 }
 
 type clientMessage struct {
@@ -224,28 +243,32 @@ func (c *client) start() {
 	go c.deviceThread()
 
 	v := &SetVolume{Volume: c.targetVolume}
-	Action(c.id, context.Background(), v, time.Now())
+	action(c.id, context.Background(), v, time.Now())
 
 	k := &KeepVoltageUpdated{}
-	Action(c.id, context.Background(), k, time.Now().Add(voltageUpdateDelay))
+	action(c.id, context.Background(), k, time.Now().Add(voltageUpdateDelay))
 }
 
 func (c *client) heapThread() {
 	for {
-		// XXX: some sort of delay in case of transient geturl fails?
+		deadline := c.heap.nextDeadline()
+		if c.nextGetURL.After(deadline) {
+			// Don't dequeue a message until a little bit of time has passed
+			// since we sent the last one to this client.
+			deadline = c.nextGetURL
+		}
 
-		deadline := time.Until(c.heap.nextDeadline())
 		select {
 		case msg := <-c.heapChannel:
 			heap.Push(c.heap, msg)
 			continue
-		case <-time.After(deadline):
+		case <-time.After(time.Until(deadline)):
 			// there's at least one message ready to dequeue
 		}
 
 		poppedMsg := heap.Pop(c.heap).(clientMessage)
 		if poppedMsg.ctx.Err() != nil {
-			log.Infof("%v: discarding expired message: %v", c.id, poppedMsg.ctx.Err())
+			log.Infof("%v: discarding expired message: %v", *c, poppedMsg.ctx.Err())
 			continue
 		}
 
@@ -268,7 +291,7 @@ func (c *client) deviceThread() {
 		case msg := <-c.deviceChannel:
 			err := msg.clientRequest.handle(msg.ctx, c)
 			if err != nil {
-				log.Errorf("request failed: %v", err)
+				log.Errorf("%v request failed: %v", *c, err)
 			}
 		}
 	}
@@ -298,6 +321,8 @@ type Play struct {
 }
 
 func (r *Play) handle(ctx context.Context, c *client) error {
+	log.Infof("%s playing %2d/%2d", *c, r.File.Folder, r.File.File)
+
 	msg, err := c.getURL(ctx, "play",
 		fmt.Sprintf("folder=%d", r.File.Folder),
 		fmt.Sprintf("file=%d", r.File.File))
@@ -311,8 +336,7 @@ func (r *Play) handle(ctx context.Context, c *client) error {
 		volume, err := strconv.Atoi(strings.TrimSpace(res[1]))
 		// This can happen if a device resets.
 		if err == nil && volume != c.targetVolume {
-			Action(c.id, ctx, &SetVolume{Volume: c.targetVolume},
-				time.Now().Add(transientDelay))
+			action(c.id, ctx, &SetVolume{Volume: c.targetVolume}, time.Now())
 		}
 	}
 	return nil
@@ -338,16 +362,16 @@ func (r *SetVolume) handle(ctx context.Context, c *client) error {
 
 type Blink struct {
 	Speed  float32
-	Delay  int
-	Jitter int
+	Delay  time.Duration
+	Jitter time.Duration
 	Reps   int
 }
 
 func (r *Blink) handle(ctx context.Context, c *client) error {
 	_, err := c.getURL(ctx, "blink",
 		fmt.Sprintf("speed=%f", r.Speed),
-		fmt.Sprintf("delay=%d", r.Delay),
-		fmt.Sprintf("jitter=%d", r.Jitter),
+		fmt.Sprintf("delay=%d", r.Delay.Milliseconds()),
+		fmt.Sprintf("jitter=%d", r.Jitter.Milliseconds()),
 		fmt.Sprintf("reps=%d", r.Reps))
 	return err
 }
@@ -376,23 +400,23 @@ func (r *Stop) handle(ctx context.Context, c *client) error {
 type KeepVoltageUpdated struct {}
 
 func (r *KeepVoltageUpdated) handle(ctx context.Context, c *client) error {
-	retryTime := time.Now().Add(transientDelay)
+	retryTime := time.Now().Add(voltageUpdateDelay)
 	body, err := c.getURL(ctx, "battery")
 	if err != nil {
-		Action(c.id, ctx, r, retryTime)
+		action(c.id, ctx, r, retryTime)
 		return err
 	}
 	p, err := strconv.ParseFloat(strings.TrimSpace(body), 32)
 	if err != nil {
-		Action(c.id, ctx, r, retryTime)
+		action(c.id, ctx, r, retryTime)
 		return err
 	}
 
 	c.voltage = float32(p)
 	c.lastVoltageUpdate = time.Now()
-	log.Infof("voltage is %.2f", p)
+	log.Infof("%v voltage is %.2f", c, p)
 
-	Action(c.id, ctx, r, time.Now().Add(voltageUpdateDelay))
+	action(c.id, ctx, r, retryTime)
 	return nil
 }
 
@@ -413,14 +437,12 @@ func (r *DrainQueue) handle(ctx context.Context, c *client) error {
 	retryTime := time.Now().Add(transientDelay)
 	body, err := c.getURL(ctx, url)
 	if err != nil {
-		// hopefully just a transient issue...
-		Action(c.id, ctx, r, retryTime)
+		action(c.id, ctx, r, retryTime)
 		return err
 	}
 	p, err := strconv.ParseInt(strings.TrimSpace(body), 10, 32)
 	if err != nil {
-		// hopefully just a transient issue...
-		Action(c.id, ctx, r, retryTime)
+		action(c.id, ctx, r, retryTime)
 		return err
 	}
 	if int(p) == 0 {
@@ -428,8 +450,8 @@ func (r *DrainQueue) handle(ctx context.Context, c *client) error {
 		return nil
 	}
 
-	log.Infof("%s queue length is %v", r.Type.String(), p) // XXX
-	Action(c.id, ctx, r, retryTime)
+	log.Infof("%v %v queue length is %v", *c, r.Type, p) // XXX
+	action(c.id, ctx, r, retryTime)
 	return nil
 }
 
@@ -447,10 +469,13 @@ func (c *client) getURL(ctx context.Context, command string, args ...string) (st
 	}
 
 	getURLFailure := func(err error, message string) (string, error) {
+		t := time.Now()
+		times := fmt.Sprintf("[last success %v, last fail %v, now %v]", c.lastSuccessCmd, c.lastFailureCmd, t)
 		if ctx.Err() == nil {
-			c.lastFailureCmd = time.Now()
+			c.lastFailureCmd = t
+			c.nextGetURL = c.lastSuccessCmd.Add(postGetURLDelay)
 		}
-		return "", fmt.Errorf("[%s] %s: err = %v", c.id, message, err)
+		return "", fmt.Errorf("%s %s: err = %v", times, message, err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -472,7 +497,7 @@ func (c *client) getURL(ctx context.Context, command string, args ...string) (st
 		return getURLFailure(err, fmt.Sprintf("got failure status code (%d) from %s: %q", resp.StatusCode, desc, body))
 	}
 
-	// Infof("[%s] %s returned success: %s", c.id, desc, body)
 	c.lastSuccessCmd = time.Now()
+	c.nextGetURL = c.lastSuccessCmd.Add(postGetURLDelay)
 	return string(body), nil
 }

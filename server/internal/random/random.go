@@ -120,8 +120,20 @@ func (v *Variable) Float64() float64 {
 	return max(value, 0.0)
 }
 
+func (v *Variable) Int() int {
+	return int(v.Float64())
+}
+
 func (v *Variable) Duration() time.Duration {
 	return time.Duration(v.Float64() * float64(time.Second))
+}
+
+func (v *Variable) MeanDuration() time.Duration {
+	return time.Duration(v.mean * float64(time.Second))
+}
+
+func (v *Variable) VarianceDuration() time.Duration {
+	return time.Duration(v.variance * float64(time.Second))
 }
 
 // ---------------------------------------------------------------------

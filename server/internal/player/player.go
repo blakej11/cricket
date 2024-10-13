@@ -57,22 +57,27 @@ func (p *Player) Start() {
 	go p.start()
 }
 
+func (p *Player) pickEffect() *weightedEffect {
+	sum := 0.0
+	for _, e := range p.effects {
+		sum += e.weight
+	}
+	target := rand.Float64() * sum
+	for _, e := range p.effects {
+		target -= e.weight
+		if target <= 0.0 {
+			return e
+		}
+	}
+	return nil
+}
+
 func (p *Player) start() {
 	for {
-		var eff *weightedEffect
+		log.Infof("%v player waiting for leases", p.ty)
+		lease.AwaitAvail(p.ty)
 
-		sum := 0.0
-		for _, e := range p.effects {
-			sum += e.weight
-		}
-		target := rand.Float64() * sum
-		for _, e := range p.effects {
-			target -= e.weight
-			if target <= 0.0 {
-				eff = e
-				break
-			}
-		}
+		eff := p.pickEffect()
 
 		if eff != nil {
 			err := eff.effect.Run()
@@ -84,7 +89,9 @@ func (p *Player) start() {
 			}
 		}
 
-		time.Sleep(p.delay.Duration())
+		// don't just spin-loop if no delay is configured
+		dur := max(p.delay.Duration(), time.Second)
+		time.Sleep(dur)
 	}
 }
 

@@ -7,7 +7,6 @@ import (
 	"github.com/blakej11/cricket/internal/client"
 	"github.com/blakej11/cricket/internal/effect"
 	"github.com/blakej11/cricket/internal/lease"
-        "github.com/blakej11/cricket/internal/log"
 )
 
 func init() {
@@ -50,12 +49,7 @@ func (l *loop) Run(ctx context.Context, params effect.AlgParams) {
 
 	for ctx.Err() == nil {
 		file := fileSet.Pick()
-		cmd := &client.Play{File: file}
-		t := time.Now()
-		for _, c := range params.Clients {
-			log.Infof("Playing %2d/%2d on %s", file.Folder, file.File, c)
-			client.Action(c, ctx, cmd, t)
-		}
+		client.Action(params.Clients, ctx, &client.Play{File: file}, time.Now())
 		file.SleepForDuration()
 		time.Sleep(delay.Duration())
 	}

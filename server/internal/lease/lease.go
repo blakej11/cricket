@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"slices"
 	"strings"
 
 	"github.com/blakej11/cricket/internal/log"
@@ -88,6 +87,15 @@ func Return(ids []types.ID, ty Type) {
 	enqueueMessage(&returnMessage{ids: ids, ty: ty})
 }
 
+// AwaitAvail allows a player to wait for at least one lease of the
+// specified type to be available. The lease may disappear by the time
+// this function returns.
+func AwaitAvail(t Type) {
+	a := &awaitMessage{t: t, response: make(chan struct{})}
+	enqueueMessage(a)
+	<- a.response
+}
+
 // ---------------------------------------------------------------------
 
 // All API calls turn into messages sent over this channel, to be serialized.
@@ -108,6 +116,8 @@ type lease struct {
 
 var data struct {
 	leases	map[types.ID]*lease
+	avail	map[Type]int
+	waiting	map[Type][]*awaitMessage
 	index	[]types.ID
 	next	int
 	ch	chan message
@@ -115,13 +125,35 @@ var data struct {
 
 func init() {
 	data.leases = make(map[types.ID]*lease)
+	data.avail = make(map[Type]int)
+	data.waiting = make(map[Type][]*awaitMessage)
 	data.ch = make(chan message)
+	for _, t := range ValidTypes() {
+		data.avail[t] = 0
+		data.waiting[t] = []*awaitMessage{}
+	}
 
 	go func() {
 		for msg := range data.ch {
 			msg.handle()
 		}
 	}()
+}
+
+func addAvail(t Type) {
+	data.avail[t]++
+	if data.avail[t] > 1 {
+		return
+	}
+	waiters := data.waiting[t]
+	data.waiting[t] = nil
+	for _, w := range waiters {
+		w.response <- struct{}{}
+	}
+}
+
+func subAvail(t Type) {
+	data.avail[t]--
 }
 
 // ---------------------------------------------------------------------
@@ -136,12 +168,14 @@ func (r *addMessage) handle() {
 		log.Fatalf("duplicate request to add client %q", r.id)
 	}
 	l := &lease{
-		id:          r.id,
-		location:    r.location,
-		leased:      make(map[Type]bool),
+		id:		r.id,
+		location:	r.location,
+		leased:		make(map[Type]bool),
+		suspended:	false,
 	}
 	for _, t := range ValidTypes() {
 		l.leased[t] = false
+		addAvail(t)
 	}
 	data.leases[r.id] = l
 	data.index = append(data.index, r.id)
@@ -155,22 +189,16 @@ func (r *suspendMessage) handle() {
 	if _, ok := data.leases[r.id]; !ok {
 		log.Fatalf("can't suspend nonexistent client %q", r.id)
 	}
-	if data.leases[r.id].suspended {
+	l := data.leases[r.id]
+	if l.suspended {
 		log.Fatalf("suspending already suspended client %q", r.id)
 	}
-	data.leases[r.id].suspended = true
-
-	for idx, id := range data.index {
-		if id != r.id {
-			continue
+	l.suspended = true
+	for _, t := range ValidTypes() {
+		if l.leased[t] {
+			subAvail(t)
 		}
-		data.index = slices.Delete(data.index, idx, idx + 1)
-		if data.next > idx {
-			data.next -= 1
-		}
-		return
 	}
-	log.Fatalf("couldn't find client %q in index", r.id)
 }
 
 type resumeMessage struct {
@@ -181,11 +209,16 @@ func (r *resumeMessage) handle() {
 	if _, ok := data.leases[r.id]; !ok {
 		log.Fatalf("can't resume nonexistent client %q", r.id)
 	}
-	if !data.leases[r.id].suspended {
+	l := data.leases[r.id]
+	if !l.suspended {
 		log.Fatalf("resuming non-suspended client %q", r.id)
 	}
-	data.leases[r.id].suspended = false
-	data.index = append(data.index, r.id)
+	l.suspended = false
+	for _, t := range ValidTypes() {
+		if !l.leased[t] {
+			addAvail(t)
+		}
+	}
 }
 
 type requestMessage struct {
@@ -202,6 +235,7 @@ func (r *requestMessage) handle() {
 		desired = min(config.MaxClients, desired)
 	}
 	desired = max(config.MinClients, desired)
+	t := config.Type
 
 	results := []types.ID{}
 	for i := range data.index {
@@ -213,10 +247,11 @@ func (r *requestMessage) handle() {
 		}
 		id := data.index[i]
 		l := data.leases[id]
-		if l.leased[config.Type] {
+		if l.leased[t] || l.suspended {
 			continue
 		}
-		l.leased[config.Type] = true
+		l.leased[t] = true
+		subAvail(t)
 		results = append(results, id)
 	}
 
@@ -242,17 +277,35 @@ type returnMessage struct {
 }
 
 func (r *returnMessage) handle() {
+	t := r.ty
 	for _, id := range r.ids {
 		if _, ok := data.leases[id]; !ok {
 			log.Fatalf("returnClient: can't find client %q", id)
 		}
 
 		l := data.leases[id]
-		if !l.leased[r.ty] {
+		if !l.leased[t] {
 			log.Fatalf("returnClient: returning invalid lease on %q", id)
 		}
-		l.leased[r.ty] = false
+		l.leased[t] = false
+		if !l.suspended {
+			addAvail(t)
+		}
 	}
+}
+
+type awaitMessage struct {
+	t		Type
+	response	chan struct{}
+}
+
+func (r *awaitMessage) handle() {
+	t := r.t
+	if data.avail[t] > 0 {
+		r.response <- struct{}{}
+		return
+	}
+	data.waiting[t] = append(data.waiting[t], r)
 }
 
 // ---------------------------------------------------------------------

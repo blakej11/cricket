@@ -87,12 +87,6 @@ func New(name string, c Config, fileSets map[string]*fileset.Set) (*Effect, erro
 	}, nil
 }
 
-type drain struct {
-	id	types.ID
-	queue	client.DrainQueue
-	drained	bool
-}
-
 // Run leases some clients and instantiates an effect on them.
 // It spawns a thread to run the algorithm, and that thread hangs around
 // until all of the client leases are returned.
@@ -118,60 +112,63 @@ func (e *Effect) Run() error {
 	go func() {
 		defer cancel()
 
-		log.Infof("Start  effect %q: duration %v, params %s", e.name, dur, algParams.String())
+		log.Infof("Start  effect %q: duration %v, params %s", e.name, dur, algParams)
 		e.alg.Run(ctx, algParams)
-		log.Infof("Finish effect %q: params %s", e.name, algParams.String())
+		log.Infof("Finish effect %q: params %s", e.name, algParams)
 
-		// Now, drain the queue on each client.
-		// We will hang around as long as necessary to do so.
-		ctx = context.Background()
-		acks := make(chan types.ID)
-		drain := client.DrainQueue {
-			Ack:	acks,
-			Type:	e.lease.Type,
-		}
-		drained := make(map[types.ID]bool)
-		for _, id := range clients {
-			client.Action(id, ctx, &drain, time.Now())
-			drained[id] = false
-		}
-
-		start := time.Now()
-		now := start
-		ticker := time.Tick(time.Second)
-		draining := []types.ID{}
-		toDrain := len(clients)
-		for toDrain > 0 {
-			select {
-			case id := <-acks:
-				draining = append(draining, id)
-				continue
-			case now = <-ticker:
-			}
-
-			lease.Return(draining, e.lease.Type)
-			for _, id := range draining {
-				drained[id] = true
-			}
-			toDrain -= len(draining)
-			draining = nil
-
-			if now.Sub(start) <= 10 * time.Second {
-				continue
-			}
-			stillDraining := []types.ID{}
-			for id, done := range drained {
-				if done {
-					continue
-				}
-				stillDraining = append(stillDraining, id)
-			}
-			log.Infof("%d clients still draining after %v: %v",
-			    toDrain, now.Sub(start), stillDraining)
-		}
+		e.drainQueue(clients)
 	}()
 
 	return nil
+}
+
+// Drain the queue on each client.
+// We will hang around as long as necessary to do so.
+func (e *Effect) drainQueue(clients []types.ID) {
+	drained := make(map[types.ID]bool)
+	for _, id := range clients {
+		drained[id] = false
+	}
+	acks := make(chan types.ID)
+	drain := client.DrainQueue {
+		Ack:	acks,
+		Type:	e.lease.Type,
+	}
+	client.Action(clients, context.Background(), &drain, time.Now())
+
+	start := time.Now()
+	now := start
+	ticker := time.Tick(time.Second)
+	draining := []types.ID{}
+	toDrain := len(clients)
+	for toDrain > 0 {
+		select {
+		case id := <-acks:
+			draining = append(draining, id)
+			continue
+		case now = <-ticker:
+		}
+
+		lease.Return(draining, e.lease.Type)
+		for _, id := range draining {
+			drained[id] = true
+		}
+		toDrain -= len(draining)
+		draining = nil
+
+		if now.Sub(start) <= 10 * time.Second {
+			continue
+		}
+		stillDraining := []types.ID{}
+		for id, done := range drained {
+			if done {
+				continue
+			}
+			stillDraining = append(stillDraining, id)
+		}
+		log.Infof("%d clients still draining after %v: %v",
+		    toDrain, now.Sub(start), stillDraining)
+	}
 }
 
 // ---------------------------------------------------------------------
@@ -187,7 +184,7 @@ type AlgParams struct {
 	Clients		[]types.ID
 }
 
-func (a *AlgParams) String() string {
+func (a AlgParams) String() string {
 	fss := []string{}
 	for n := range a.FileSets {
 		fss = append(fss, n)

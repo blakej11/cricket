@@ -8,6 +8,7 @@ import (
         "github.com/blakej11/cricket/internal/effect"
         "github.com/blakej11/cricket/internal/fileset"
         "github.com/blakej11/cricket/internal/lease"
+	_ "github.com/blakej11/cricket/internal/light"
 	"github.com/blakej11/cricket/internal/mdns"
         "github.com/blakej11/cricket/internal/player"
 	_ "github.com/blakej11/cricket/internal/sound"
