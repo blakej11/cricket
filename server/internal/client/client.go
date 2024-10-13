@@ -361,7 +361,7 @@ func (r *SetVolume) handle(ctx context.Context, c *client) error {
 }
 
 type Blink struct {
-	Speed  float32
+	Speed  float64
 	Delay  time.Duration
 	Jitter time.Duration
 	Reps   int
@@ -369,7 +369,7 @@ type Blink struct {
 
 func (r *Blink) handle(ctx context.Context, c *client) error {
 	_, err := c.getURL(ctx, "blink",
-		fmt.Sprintf("speed=%f", r.Speed),
+		fmt.Sprintf("speed=%.3f", r.Speed),
 		fmt.Sprintf("delay=%d", r.Delay.Milliseconds()),
 		fmt.Sprintf("jitter=%d", r.Jitter.Milliseconds()),
 		fmt.Sprintf("reps=%d", r.Reps))
