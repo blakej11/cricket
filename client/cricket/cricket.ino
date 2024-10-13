@@ -752,9 +752,10 @@ class Cricket {
       char msg[80];
       int folder = net_.arg("folder").toInt();
       int file = net_.arg("file").toInt();
-      int reps = net_.arg("reps").toInt();
-      int delay = net_.arg("delay").toInt();
-      int jitter = net_.arg("jitter").toInt();
+      int volume = net_.arg("volume").toInt(); // optional
+      int reps = net_.arg("reps").toInt();     // optional
+      int delay = net_.arg("delay").toInt();   // optional
+      int jitter = net_.arg("jitter").toInt(); // optional
 
       if (folder < 1 || folder > 99) {
         snprintf(msg, sizeof (msg), "folder %d must be between 1 and 99 inclusive", folder);
@@ -762,24 +763,28 @@ class Cricket {
       } else if (file < 1 || file > 255) {
         snprintf(msg, sizeof (msg), "file %d must be between 1 and 255 inclusive", file);
         net_.sendFailure(msg);
+      } else if (volume < 0 || volume > 48) {
+        snprintf(msg, sizeof (msg), "volume %d must be between 0 and 48 inclusive", volume);
+        net_.sendFailure(msg);
       } else {
         if (reps == 0) reps = 1;
+        if (volume > 0) {
+          set_volume(volume, true);
+        }
         play(folder, file, reps, delay, jitter);
-        // the server code expects the volume to immediately follow a colon
-        snprintf(msg, sizeof (msg), "playing at volume:%d", volume_);
-        net_.sendSuccess(msg);
+        net_.sendSuccess();
       }
     });
 
     net_.on("/setvolume", [this]() {
-      int vol = net_.arg("volume").toInt();
+      int volume = net_.arg("volume").toInt();
       String persist = net_.arg("persist");
-      if (vol < 0 || vol > 48) {
+      if (volume < 0 || volume > 48) {
         net_.sendFailure("volume must be between 0 and 48 inclusive");
       } else if (persist != "" && persist != "true" && persist != "false") {
         net_.sendFailure("persist must be either \"true\" or \"false\"");
       } else {
-        set_volume(vol, persist == "true");
+        set_volume(volume, persist == "true");
         net_.sendSuccess();
       }
     });
@@ -963,8 +968,8 @@ const CricketConfig cricket_config = {
   .shutdown_delay_msec = 10000,
   .initial_volume = 0x8, // 0x30 = max
 
-  .ssid = "sparkles",
-  .pass = "sash etching wrap classify",
+  .ssid = "SSID",
+  .pass = "PASSWORD",
 
   .port = 80,
 
