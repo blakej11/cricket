@@ -56,6 +56,9 @@ func (b *unison) Run(ctx context.Context, params effect.AlgParams) {
 	blinkReps := params.Parameters["blinkReps"]
 	groupDelay := params.Parameters["groupDelay"]
 	groupReps := params.Parameters["groupReps"].Int()
+	if groupReps == 0 {
+		groupReps = 1
+	}
 
 	for ctx.Err() == nil && groupReps > 0 {
 		cmd := &client.Blink{
@@ -65,12 +68,7 @@ func (b *unison) Run(ctx context.Context, params effect.AlgParams) {
 			Reps:	blinkReps.Int(),
 		}
 		client.Action(params.Clients, ctx, cmd, time.Now())
-
-		// The current client webserver is async only, so we have to
-		// model the delay associated with a blink and wait that long :(
-		pause := (int64((256.0 / cmd.Speed) * 2.0) + cmd.Delay.Milliseconds()) * int64(cmd.Reps)
-		time.Sleep(time.Duration(float64(pause) * float64(time.Millisecond)))
-
+		cmd.SleepForDuration()
 		time.Sleep(groupDelay.Duration())
 		groupReps--
 	}

@@ -304,14 +304,13 @@ func (r *Play) SleepForDuration() {
 	if reps == 0 {
 		reps = 1
 	}
-	d := r.File.Duration * float64(reps)
-	// it sleeps one time fewer than it plays
-	d += r.Delay.Seconds() * float64(reps - 1)
+	d := (r.File.Duration + r.Delay.Seconds()) * float64(reps)
 	time.Sleep(time.Duration(d * float64(time.Second)))
 }
 
 func (r *Play) handle(ctx context.Context, c *client) error {
-	log.Infof("%s playing %2d/%2d", *c, r.File.Folder, r.File.File)
+	log.Infof("%s playing %2d/%2d (%d reps, %d delay, %d jitter)",
+            *c, r.File.Folder, r.File.File, r.Reps, r.Delay.Milliseconds(), r.Jitter.Milliseconds())
 
 	volume := r.Volume
 	if volume == 0 {
@@ -347,6 +346,14 @@ type Blink struct {
 	Delay  time.Duration
 	Jitter time.Duration
 	Reps   int
+}
+
+// Sleep for the expected duration of this command.
+// This is an unfortunate hack given the synchronous web server on the client.
+func (r *Blink) SleepForDuration() {
+	pause := ((256.0 / r.Speed) * 2.0) + float64(r.Delay.Milliseconds())
+	pause *= float64(r.Reps)
+	time.Sleep(time.Duration(pause * float64(time.Millisecond)))
 }
 
 func (r *Blink) handle(ctx context.Context, c *client) error {

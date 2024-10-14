@@ -46,9 +46,9 @@ func (n *nonrandom) GetRequirements() effect.AlgRequirements {
 }
 
 func (n *nonrandom) Run(ctx context.Context, params effect.AlgParams) {
-	fileSet := params.FileSets["main"]
+	set := params.FileSets["main"].Set()
 	groupDelay := params.Parameters["groupDelay"]
-	set := fileSet.Set()
+
 	sort.Slice(set, func (i, j int) bool {
 		if set[i].Folder < set[j].Folder {
 			return true
@@ -78,21 +78,23 @@ type loop struct {}
 func (l *loop) GetRequirements() effect.AlgRequirements {
 	return effect.AlgRequirements{
 		FileSets:	[]string{"main"},
-		Parameters:	[]string{"groupDelay"},
+		Parameters:	[]string{"fileReps", "fileDelay", "groupDelay"},
 	}
 }
 
 func (l *loop) Run(ctx context.Context, params effect.AlgParams) {
 	fileSet := params.FileSets["main"]
+	fileReps := params.Parameters["fileReps"]
+	fileDelay := params.Parameters["fileDelay"]
 	groupDelay := params.Parameters["groupDelay"]
 
 	for ctx.Err() == nil {
 		cmd := &client.Play{
-			File: fileSet.Pick(),
-			Volume: 0, // default
-			Reps: 1,
-			Delay: time.Second, // XXX
-			Jitter: time.Second, // XXX
+			File:   fileSet.Pick(),
+			Volume: 0, // use default
+			Reps:   fileReps.Int(),
+			Delay:	fileDelay.MeanDuration(),
+			Jitter:	fileDelay.VarianceDuration(),
 		}
 		client.Action(params.Clients, ctx, cmd, time.Now())
 		cmd.SleepForDuration()
