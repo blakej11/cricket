@@ -19,6 +19,7 @@ type Config struct {
 	Algorithm	string			// the name of the algorithm
 	FileSets	map[string]string	// names of fileset(s) to use
 	Parameters	map[string]random.Config// how to define parameters
+	Duration	random.Config
 	Lease		lease.Config
 }
 
@@ -34,16 +35,7 @@ type Effect struct {
 	duration	*random.Variable
 }
 
-const (
-	durationParameter = "duration"
-)
-
 func New(name string, c Config, fileSets map[string]*fileset.Set) (*Effect, error) {
-	if _, ok := c.Parameters[durationParameter]; !ok {
-		return nil, fmt.Errorf("effect %q is missing the required %q parameter", name, durationParameter)
-	}
-	duration := random.New(c.Parameters[durationParameter])
-
 	alg, err := lookupAlgorithm(c.Lease.Type, c.Algorithm)
 	if err != nil {
 		return nil, err
@@ -76,7 +68,7 @@ func New(name string, c Config, fileSets map[string]*fileset.Set) (*Effect, erro
 		alg:		alg,
 		fileSets:	fss,
 		parameters:	parameters,
-		duration:	duration,
+		duration:	random.New(c.Duration),
 	}, nil
 }
 
@@ -85,13 +77,13 @@ func New(name string, c Config, fileSets map[string]*fileset.Set) (*Effect, erro
 // until all of the client leases are returned.
 // It returns an error if the lease could not be satisfied.
 func (e *Effect) Run() error {
-        dur := e.duration.Duration()
-        ctx, cancel := context.WithTimeout(context.Background(), dur)
-
 	clients, err := lease.Request(e.lease)
 	if err != nil {
 		return err
 	}
+
+        dur := e.duration.Duration()
+        ctx, cancel := context.WithTimeout(context.Background(), dur)
 
 	algParams := AlgParams {
 		FileSets:	e.fileSets,
