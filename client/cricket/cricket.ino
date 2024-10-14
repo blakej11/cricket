@@ -349,7 +349,7 @@ class InitCmd : public DFCmd {
 class PlayCmd : public DFCmd {
  public:
   PlayCmd(int folder, int file, int reps, int delay_msec, int jitter_msec) :
-    DFCmd(kPlayFile),
+    DFCmd(kPauseBetweenPlays),
     folder_(folder), file_(file),
     reps_(reps), delay_msec_(delay_msec), jitter_msec_(jitter_msec) {}
 
