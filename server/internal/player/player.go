@@ -74,9 +74,6 @@ func (p *Player) pickEffect() *weightedEffect {
 
 func (p *Player) start() {
 	for {
-		log.Infof("%v player waiting for leases", p.ty)
-		lease.AwaitAvail(p.ty)
-
 		eff := p.pickEffect()
 
 		if eff != nil {

@@ -1,20 +1,24 @@
 package lease
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
 
 	"github.com/blakej11/cricket/internal/log"
+	"github.com/blakej11/cricket/internal/random"
 	"github.com/blakej11/cricket/internal/types"
 )
 
-// Config describes how many clients are needed for an effect.
+// Config describes how many clients are needed/desired for an effect.
 type Config struct {
         Type		Type
-        MinClients	int	// minimum number of clients needed
-        MaxClients	int	// maximum number of clients allowed
+        MinClients	int		// minimum number of clients needed
+        MaxClients	int		// maximum number of clients allowed
+	FleetFraction	random.Config	// desired fraction of fleet
+	MaxWait		random.Config
 
 	// could request specific IDs I guess
 	// could request something w/r/t PhysLocation
@@ -27,12 +31,33 @@ const (
 	Light
 )
 
+// ------------------------------------------------------------------
+
+// Params is the instantiation of a Config.
+type Params struct {
+        Type		Type
+        minClients	int
+        maxClients	int
+	fleetFraction	*random.Variable
+	maxWait		*random.Variable
+}
+
+func New(c Config) Params {
+	return Params{
+		Type:          c.Type,
+		minClients:    c.MinClients,
+		maxClients:    c.MaxClients,
+		fleetFraction: random.New(c.FleetFraction),
+		maxWait:       random.New(c.MaxWait),
+	}
+}
+
 func ValidTypes() []Type {
 	return []Type{Sound, Light}
 }
 
-func (t Type) String() string {
-	switch (t) {
+func (ty Type) String() string {
+	switch (ty) {
 	default:
 		return "unknown"
 	case Sound:
@@ -42,32 +67,49 @@ func (t Type) String() string {
 	}
 }
 
+func (ty *Type) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	switch strings.ToLower(s) {
+	default:
+		*ty = UnknownType
+	case "sound":
+		*ty = Sound
+	case "light":
+		*ty = Light
+	}
+
+	return nil
+}
+
+// needed to unmarshal a type as a map key
+func (ty *Type) UnmarshalText(b []byte) error {
+        return ty.UnmarshalJSON(b)
+}
+
+func (ty Type) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ty.String())
+}
+
 // ---------------------------------------------------------------------
 
 // Add allows the mDNS thread to add information about a newly
 // discovered client. This also undoes a Suspend operation.
 func Add(id types.ID, location types.PhysLocation) {
-	enqueueMessage(&addMessage{id: id, location: location})
-}
-
-// Suspend allows a client to be marked as "should not be used".
-func Suspend(id types.ID) {
-	enqueueMessage(&suspendMessage{id: id})
-}
-
-// Resume allows a client to be marked as "can be used once again".
-func Resume(id types.ID) {
-	enqueueMessage(&resumeMessage{id: id})
+	for _, ty := range ValidTypes() {
+		enqueueReturnMessage(ty, &addMessage{id: id, location: location})
+	}
 }
 
 // Request allows an effect to get a collection of clients.
-func Request(config Config, targetFrac float64) ([]types.ID, error) {
+func Request(p Params) ([]types.ID, error) {
 	clientCh := make(chan []types.ID)
 	errorCh := make(chan error)
 
-	enqueueMessage(&requestMessage{
-		config: config,
-		targetFrac: targetFrac,
+	enqueueNormalMessage(p.Type, &requestMessage{
+		params: p,
 		clientResponse: clientCh,
 		errorResponse: errorCh,
 	})
@@ -76,7 +118,7 @@ func Request(config Config, targetFrac float64) ([]types.ID, error) {
 	case clients := <-clientCh:
 		return clients, nil
 	case err := <-errorCh:
-		return []types.ID{}, err
+		return nil, err
 	}
 }
 
@@ -84,76 +126,55 @@ func Request(config Config, targetFrac float64) ([]types.ID, error) {
 // Clients leased for sound should have their sound queue drained before
 // being returned here; similarly for clients leased for light.
 func Return(ids []types.ID, ty Type) {
-	enqueueMessage(&returnMessage{ids: ids, ty: ty})
-}
-
-// AwaitAvail allows a player to wait for at least one lease of the
-// specified type to be available. The lease may disappear by the time
-// this function returns.
-func AwaitAvail(t Type) {
-	a := &awaitMessage{t: t, response: make(chan struct{})}
-	enqueueMessage(a)
-	<- a.response
+	enqueueReturnMessage(ty, &returnMessage{ids: ids})
 }
 
 // ---------------------------------------------------------------------
 
-// All API calls turn into messages sent over this channel, to be serialized.
-func enqueueMessage(m message) {
-	data.ch <- m
+// All API calls turn into messages sent over these channels, to be serialized.
+func enqueueNormalMessage(ty Type, m message) {
+	data[ty].normalCh <- m
+}
+func enqueueReturnMessage(ty Type, m message) {
+	data[ty].returnCh <- m
 }
 
 type message interface {
-	handle()
+	handle(Type)
 }
 
-type lease struct {
-	id		types.ID
-	location	types.PhysLocation
-	leased		map[Type]bool
-	suspended	bool
+type leaseData struct {
+	locations	map[types.ID]types.PhysLocation
+	leased		map[types.ID]bool
+	index		[]types.ID
+	next		int
+	normalCh	chan message // for request messages
+	returnCh	chan message // for add and return messages
 }
 
-var data struct {
-	leases	map[types.ID]*lease
-	avail	map[Type]int
-	waiting	map[Type][]*awaitMessage
-	index	[]types.ID
-	next	int
-	ch	chan message
-}
+var data map[Type]*leaseData
 
 func init() {
-	data.leases = make(map[types.ID]*lease)
-	data.avail = make(map[Type]int)
-	data.waiting = make(map[Type][]*awaitMessage)
-	data.ch = make(chan message)
-	for _, t := range ValidTypes() {
-		data.avail[t] = 0
-		data.waiting[t] = []*awaitMessage{}
-	}
-
-	go func() {
-		for msg := range data.ch {
-			msg.handle()
+	data = make(map[Type]*leaseData)
+	for _, ty := range ValidTypes() {
+		data[ty] = &leaseData{
+			locations:	make(map[types.ID]types.PhysLocation),
+			leased:		make(map[types.ID]bool),
+			normalCh:	make(chan message),
+			returnCh:	make(chan message),
 		}
-	}()
-}
 
-func addAvail(t Type) {
-	data.avail[t]++
-	if data.avail[t] > 1 {
-		return
+		go func() {
+			for {
+				select {
+				case msg := <-data[ty].normalCh:
+					msg.handle(ty)
+				case msg := <-data[ty].returnCh:
+					msg.handle(ty)
+				}
+			}
+		}()
 	}
-	waiters := data.waiting[t]
-	data.waiting[t] = nil
-	for _, w := range waiters {
-		w.response <- struct{}{}
-	}
-}
-
-func subAvail(t Type) {
-	data.avail[t]--
 }
 
 // ---------------------------------------------------------------------
@@ -163,185 +184,91 @@ type addMessage struct {
 	location types.PhysLocation
 }
 
-func (r *addMessage) handle() {
-	if _, ok := data.leases[r.id]; ok {
+func (r *addMessage) handle(ty Type) {
+	d := data[ty]
+
+	if _, ok := d.leased[r.id]; ok {
 		log.Fatalf("duplicate request to add client %q", r.id)
 	}
-	l := &lease{
-		id:		r.id,
-		location:	r.location,
-		leased:		make(map[Type]bool),
-		suspended:	false,
-	}
-	for _, t := range ValidTypes() {
-		l.leased[t] = false
-		addAvail(t)
-	}
-	data.leases[r.id] = l
-	data.index = append(data.index, r.id)
-}
-
-type suspendMessage struct {
-	id types.ID
-}
-
-func (r *suspendMessage) handle() {
-	if _, ok := data.leases[r.id]; !ok {
-		log.Fatalf("can't suspend nonexistent client %q", r.id)
-	}
-	l := data.leases[r.id]
-	if l.suspended {
-		log.Fatalf("suspending already suspended client %q", r.id)
-	}
-	l.suspended = true
-	for _, t := range ValidTypes() {
-		if l.leased[t] {
-			subAvail(t)
-		}
-	}
-}
-
-type resumeMessage struct {
-	id types.ID
-}
-
-func (r *resumeMessage) handle() {
-	if _, ok := data.leases[r.id]; !ok {
-		log.Fatalf("can't resume nonexistent client %q", r.id)
-	}
-	l := data.leases[r.id]
-	if !l.suspended {
-		log.Fatalf("resuming non-suspended client %q", r.id)
-	}
-	l.suspended = false
-	for _, t := range ValidTypes() {
-		if !l.leased[t] {
-			addAvail(t)
-		}
-	}
+	d.locations[r.id] = r.location
+	d.leased[r.id] = false
+	d.index = append(d.index, r.id)
 }
 
 type requestMessage struct {
-	config		Config
-	targetFrac	float64
+	params		Params
 	clientResponse	chan []types.ID
 	errorResponse	chan error
 }
 
-func (r *requestMessage) handle() {
-	config := r.config
-	desired := int(math.Round(r.targetFrac * float64(len(data.index))))
-	if config.MaxClients > 0 {
-		desired = min(config.MaxClients, desired)
-	}
-	desired = max(config.MinClients, desired)
-	t := config.Type
+func (r *requestMessage) handle(ty Type) {
+	d := data[ty]
+	params := r.params
 
+	ctx, cancel := context.WithTimeout(context.Background(), params.maxWait.Duration())
+	defer cancel()
+
+	desired := int(math.Round(params.fleetFraction.Float64() * float64(len(d.index))))
+	if params.maxClients > 0 {
+		desired = min(params.maxClients, desired)
+	}
+	desired = max(params.minClients, desired)
 	results := []types.ID{}
-	for i := range data.index {
-		index := (data.next + i) % len(data.index)
-		if len(results) == desired {
-			data.next = index
-			r.clientResponse <- results
-			return
+
+waitLoop:
+	for {
+		for i := range d.index {
+			index := (d.next + i) % len(d.index)
+			if len(results) == desired {
+				d.next = index
+				r.clientResponse <- results
+				return
+			}
+			id := d.index[i]
+			if d.leased[id] {
+				continue
+			}
+			d.leased[id] = true
+			results = append(results, id)
 		}
-		id := data.index[i]
-		l := data.leases[id]
-		if l.leased[t] || l.suspended {
-			continue
+
+		// Didn't find enough clients. Wait for some to be returned
+		// (and try to grab them), or for the timeout to be reached.
+		select {
+		case msg := <-d.returnCh:
+			msg.handle(ty)
+		case <-ctx.Done():
+			break waitLoop
 		}
-		l.leased[t] = true
-		subAvail(t)
-		results = append(results, id)
 	}
 
 	// We got all the way through but haven't succeeded. What do?
 	num := len(results)
-	if num >= config.MinClients {
+	if num >= params.minClients {
 		r.clientResponse <- results
 		return
 	}
 
-	err := fmt.Errorf("not enough clients available (%d, wanted at least %d)", num, config.MinClients)
+	err := fmt.Errorf("not enough clients available (%d, wanted at least %d)", num, params.minClients)
 	r.errorResponse <- err
-	ret := &returnMessage{
-		ids: results,
-		ty:  config.Type,
-	}
-	ret.handle()
+	ret := &returnMessage{ids: results}
+	ret.handle(ty)
 }
 
 type returnMessage struct {
 	ids	[]types.ID
-	ty	Type
 }
 
-func (r *returnMessage) handle() {
-	t := r.ty
+func (r *returnMessage) handle(ty Type) {
+	d := data[ty]
 	for _, id := range r.ids {
-		if _, ok := data.leases[id]; !ok {
+		if _, ok := d.leased[id]; !ok {
 			log.Fatalf("returnClient: can't find client %q", id)
 		}
-
-		l := data.leases[id]
-		if !l.leased[t] {
+		if !d.leased[id] {
 			log.Fatalf("returnClient: returning invalid lease on %q", id)
 		}
-		l.leased[t] = false
-		if !l.suspended {
-			addAvail(t)
-		}
+		d.leased[id] = false
 	}
 }
 
-type awaitMessage struct {
-	t		Type
-	response	chan struct{}
-}
-
-func (r *awaitMessage) handle() {
-	t := r.t
-	if data.avail[t] > 0 {
-		r.response <- struct{}{}
-		return
-	}
-	data.waiting[t] = append(data.waiting[t], r)
-}
-
-// ---------------------------------------------------------------------
-
-func (t *Type) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	switch strings.ToLower(s) {
-	default:
-		*t = UnknownType
-	case "sound":
-		*t = Sound
-	case "light":
-		*t = Light
-	}
-
-	return nil
-}
-
-// needed to unmarshal a type as a map key
-func (t *Type) UnmarshalText(b []byte) error {
-        return t.UnmarshalJSON(b)
-}
-
-func (t Type) MarshalJSON() ([]byte, error) {
-	var s string
-	switch t {
-	default:
-		s = "unknown"
-	case Sound:
-		s = "sound"
-	case Light:
-		s = "light"
-	}
-
-	return json.Marshal(s)
-}

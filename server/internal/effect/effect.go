@@ -27,17 +27,15 @@ type Config struct {
 // Effect is the instantiation of a Config.
 type Effect struct {
 	name		string
-	lease		lease.Config
+	lease		lease.Params
 	alg		Algorithm
 	fileSets	map[string]*fileset.Set
 	parameters	map[string]*random.Variable
 	duration	*random.Variable
-	fleetFraction	*random.Variable
 }
 
 const (
 	durationParameter = "duration"
-	fleetFracParameter = "fleet_fraction"
 )
 
 func New(name string, c Config, fileSets map[string]*fileset.Set) (*Effect, error) {
@@ -45,10 +43,6 @@ func New(name string, c Config, fileSets map[string]*fileset.Set) (*Effect, erro
 		return nil, fmt.Errorf("effect %q is missing the required %q parameter", name, durationParameter)
 	}
 	duration := random.New(c.Parameters[durationParameter])
-	if _, ok := c.Parameters[fleetFracParameter]; !ok {
-		return nil, fmt.Errorf("effect %q is missing the required %q parameter", name, fleetFracParameter)
-	}
-	fleetFraction := random.New(c.Parameters[fleetFracParameter])
 
 	alg, err := lookupAlgorithm(c.Lease.Type, c.Algorithm)
 	if err != nil {
@@ -78,12 +72,11 @@ func New(name string, c Config, fileSets map[string]*fileset.Set) (*Effect, erro
 
 	return &Effect{
 		name:		name,
-		lease:		c.Lease,
+		lease:		lease.New(c.Lease),
 		alg:		alg,
 		fileSets:	fss,
 		parameters:	parameters,
 		duration:	duration,
-		fleetFraction:	fleetFraction,
 	}, nil
 }
 
@@ -95,7 +88,7 @@ func (e *Effect) Run() error {
         dur := e.duration.Duration()
         ctx, cancel := context.WithTimeout(context.Background(), dur)
 
-	clients, err := lease.Request(e.lease, e.fleetFraction.Float64())
+	clients, err := lease.Request(e.lease)
 	if err != nil {
 		return err
 	}

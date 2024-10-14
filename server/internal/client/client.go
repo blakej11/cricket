@@ -22,12 +22,6 @@ func Add(id types.ID, loc types.NetLocation) {
 	enqueueAdminMessage(&addClientMessage{id: id, location: loc})
 }
 
-// Del allows the mDNS thread (... or something ...) to indicate that a client
-// has gone away.
-func Del(id types.ID) {
-	enqueueAdminMessage(&delClientMessage{id: id})
-}
-
 // Request that some clients perform an action.
 func Action(ids []types.ID, ctx context.Context, req clientRequest, earliest time.Time) {
 	for _, id := range ids {
@@ -109,13 +103,7 @@ type addClientMessage struct {
 func (r *addClientMessage) handle() {
 	if _, ok := data.clients[r.id]; ok {
 		c := data.clients[r.id]
-		if c.suspended {
-			c.suspended = false
-			lease.Resume(r.id)
-			log.Infof("%v resuming client", *c)
-		} else {
-			log.Infof("%v got new add from existing client", *c)
-		}
+		log.Infof("%v got new add from existing client", *c)
 		return
 	}
 
@@ -148,20 +136,6 @@ func (r *addClientMessage) handle() {
 	lease.Add(r.id, physLocation)
 }
 
-type delClientMessage struct {
-	id types.ID
-}
-
-func (r *delClientMessage) handle() {
-	if _, ok := data.clients[r.id]; !ok {
-		log.Fatalf("request to remove nonexistent client %q", r.id)
-	}
-	c := data.clients[r.id]
-	c.suspended = true
-	lease.Suspend(r.id)
-	log.Infof("%v suspending client", *c)
-}
-
 // ---------------------------------------------------------------------
 
 // client represents a single client.
@@ -186,7 +160,6 @@ type client struct {
         lastFailureCmd  time.Time
         lastVoltageUpdate	time.Time
         voltage		float32
-	suspended	bool
 
         targetVolume    int
 }
@@ -318,28 +291,41 @@ func (r *Ping) handle(ctx context.Context, c *client) error {
 
 type Play struct {
 	File	fileset.File
+	Volume	int
+	Reps	int
+	Delay	time.Duration
+	Jitter	time.Duration
+}
+
+// Sleep for the expected duration of this command.
+// This is an unfortunate hack given the synchronous web server on the client.
+func (r *Play) SleepForDuration() {
+	reps := r.Reps
+	if reps == 0 {
+		reps = 1
+	}
+	d := r.File.Duration * float64(reps)
+	// it sleeps one time fewer than it plays
+	d += r.Delay.Seconds() * float64(reps - 1)
+	time.Sleep(time.Duration(d * float64(time.Second)))
 }
 
 func (r *Play) handle(ctx context.Context, c *client) error {
 	log.Infof("%s playing %2d/%2d", *c, r.File.Folder, r.File.File)
 
-	msg, err := c.getURL(ctx, "play",
-		fmt.Sprintf("folder=%d", r.File.Folder),
-		fmt.Sprintf("file=%d", r.File.File))
-	if err != nil {
-		return err
+	volume := r.Volume
+	if volume == 0 {
+		volume = c.targetVolume
 	}
 
-	// this returns the current volume
-	res := strings.Split(msg, ":")
-	if len(res) == 2 {
-		volume, err := strconv.Atoi(strings.TrimSpace(res[1]))
-		// This can happen if a device resets.
-		if err == nil && volume != c.targetVolume {
-			action(c.id, ctx, &SetVolume{Volume: c.targetVolume}, time.Now())
-		}
-	}
-	return nil
+	_, err := c.getURL(ctx, "play",
+		fmt.Sprintf("folder=%d", r.File.Folder),
+		fmt.Sprintf("file=%d", r.File.File),
+		fmt.Sprintf("volume=%d", volume),
+		fmt.Sprintf("reps=%d", r.Reps),
+		fmt.Sprintf("delay=%d", r.Delay.Milliseconds()),
+		fmt.Sprintf("jitter=%d", r.Jitter.Milliseconds()))
+	return err
 }
 
 type SetVolume struct {
@@ -353,11 +339,7 @@ func (r *SetVolume) handle(ctx context.Context, c *client) error {
 	// set this regardless of whether the set-volume action succeeded
 	c.targetVolume = r.Volume
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 type Blink struct {

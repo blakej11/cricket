@@ -53,3 +53,7 @@ func New(name string, c Config, files map[string]File) (*Set, error) {
 func (f *Set) Pick() File {
 	return f.files[rand.Int32N(int32(len(f.files)))]
 }
+
+func (f *Set) Set() []File {
+	return f.files
+}

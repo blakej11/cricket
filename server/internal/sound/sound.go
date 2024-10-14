@@ -2,6 +2,7 @@ package sound
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/blakej11/cricket/internal/client"
@@ -11,6 +12,7 @@ import (
 
 func init() {
 	effect.RegisterAlgorithm(lease.Sound, "silence", &silence{})
+	effect.RegisterAlgorithm(lease.Sound, "nonrandom", &nonrandom{})
 	effect.RegisterAlgorithm(lease.Sound, "loop", &loop{})
 }
 
@@ -33,29 +35,68 @@ func (s *silence) Run(ctx context.Context, params effect.AlgParams) {
 
 // ---------------------------------------------------------------------
 
+// nonrandom plays one of a set of sounds.
+type nonrandom struct {}
+
+func (n *nonrandom) GetRequirements() effect.AlgRequirements {
+	return effect.AlgRequirements{
+		FileSets:	[]string{"main"},
+		Parameters:	[]string{"groupDelay"},
+	}
+}
+
+func (n *nonrandom) Run(ctx context.Context, params effect.AlgParams) {
+	fileSet := params.FileSets["main"]
+	groupDelay := params.Parameters["groupDelay"]
+	set := fileSet.Set()
+	sort.Slice(set, func (i, j int) bool {
+		if set[i].Folder < set[j].Folder {
+			return true
+		}
+		return set[i].File < set[j].File
+	})
+
+	for _, f := range set {
+		cmd := &client.Play{
+			File: f,
+			Volume: 0, // default
+			Reps: 8,
+			Delay: 0,
+			Jitter: 0,
+		}
+		client.Action(params.Clients, ctx, cmd, time.Now())
+		cmd.SleepForDuration()
+		time.Sleep(groupDelay.Duration())
+	}
+}
+
+// ---------------------------------------------------------------------
+
 // loop plays one of a set of sounds.
 type loop struct {}
 
 func (l *loop) GetRequirements() effect.AlgRequirements {
 	return effect.AlgRequirements{
 		FileSets:	[]string{"main"},
-		Parameters:	[]string{"delay"},
+		Parameters:	[]string{"groupDelay"},
 	}
 }
 
 func (l *loop) Run(ctx context.Context, params effect.AlgParams) {
 	fileSet := params.FileSets["main"]
-	delay := params.Parameters["delay"]
+	groupDelay := params.Parameters["groupDelay"]
 
 	for ctx.Err() == nil {
-		file := fileSet.Pick()
-		client.Action(params.Clients, ctx, &client.Play{File: file}, time.Now())
-		file.SleepForDuration()
-		time.Sleep(delay.Duration())
+		cmd := &client.Play{
+			File: fileSet.Pick(),
+			Volume: 0, // default
+			Reps: 1,
+			Delay: time.Second, // XXX
+			Jitter: time.Second, // XXX
+		}
+		client.Action(params.Clients, ctx, cmd, time.Now())
+		cmd.SleepForDuration()
+		time.Sleep(groupDelay.Duration())
 	}
 }
 
-// Client delays:
-// - 1000 + 30 msec for init
-// - 30 msec for volume
-// could call /setvolume (or /unpause or /stop) to ensure it's on
