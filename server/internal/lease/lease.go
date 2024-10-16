@@ -146,7 +146,7 @@ type message interface {
 type leaseData struct {
 	locations	map[types.ID]types.PhysLocation
 	leased		map[types.ID]bool
-	index		[]types.ID
+	idSlice		[]types.ID
 	next		int
 	normalCh	chan message // for request messages
 	returnCh	chan message // for add and return messages
@@ -192,7 +192,7 @@ func (r *addMessage) handle(ty Type) {
 	}
 	d.locations[r.id] = r.location
 	d.leased[r.id] = false
-	d.index = append(d.index, r.id)
+	d.idSlice = append(d.idSlice, r.id)
 }
 
 type requestMessage struct {
@@ -208,28 +208,33 @@ func (r *requestMessage) handle(ty Type) {
 	ctx, cancel := context.WithTimeout(context.Background(), params.maxWait.Duration())
 	defer cancel()
 
-	desired := int(math.Round(params.fleetFraction.Float64() * float64(len(d.index))))
+	desired := int(math.Round(params.fleetFraction.Float64() * float64(len(d.idSlice))))
 	if params.maxClients > 0 {
 		desired = min(params.maxClients, desired)
 	}
 	desired = max(params.minClients, desired)
+	if desired == 0 {
+		r.clientResponse <- nil
+		return
+	}
+
 	results := []types.ID{}
 
 waitLoop:
 	for {
-		for i := range d.index {
-			index := (d.next + i) % len(d.index)
-			if len(results) == desired {
-				d.next = index
-				r.clientResponse <- results
-				return
-			}
-			id := d.index[i]
+		for i := range d.idSlice {
+			index := (d.next + i) % len(d.idSlice)
+			id := d.idSlice[index]
 			if d.leased[id] {
 				continue
 			}
 			d.leased[id] = true
 			results = append(results, id)
+			if len(results) == desired {
+				d.next = index
+				r.clientResponse <- results
+				return
+			}
 		}
 
 		// Didn't find enough clients. Wait for some to be returned

@@ -2,7 +2,9 @@ package effect
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+	"hash/maphash"
 	"strings"
 	"time"
 
@@ -110,10 +112,13 @@ func (e *Effect) Run() error {
 // Drain the queue on each client.
 // We will hang around as long as necessary to do so.
 func (e *Effect) drainQueue(clients []types.ID) {
+	var b []byte
 	drained := make(map[types.ID]bool)
 	for _, id := range clients {
 		drained[id] = false
+		b, _ = binary.Append(b, binary.NativeEndian, ([]byte)(id))
 	}
+	clientHash := maphash.Bytes(maphash.MakeSeed(), b)
 	acks := make(chan types.ID)
 	drain := client.DrainQueue {
 		Ack:	acks,
@@ -151,8 +156,8 @@ func (e *Effect) drainQueue(clients []types.ID) {
 			}
 			stillDraining = append(stillDraining, id)
 		}
-		log.Infof("%d clients still draining after %v: %v",
-		    toDrain, now.Sub(start), stillDraining)
+		log.Infof("[drain %016x] %d clients still draining after %.1f seconds: %v",
+		    clientHash, toDrain, now.Sub(start).Seconds(), stillDraining)
 	}
 }
 

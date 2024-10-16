@@ -104,6 +104,11 @@ func (r *addClientMessage) handle() {
 	if _, ok := data.clients[r.id]; ok {
 		c := data.clients[r.id]
 		log.Infof("%v got new add from existing client", *c)
+		if !c.netLocation.Address.Equal(r.location.Address) ||
+		   c.netLocation.Port != r.location.Port {
+			log.Infof("%v updating net to %v", *c, r.location)
+			c.netLocation = r.location
+		}
 		return
 	}
 
@@ -215,6 +220,9 @@ func (c *client) start() {
 	go c.heapThread()
 	go c.deviceThread()
 
+	s := &Stop{}
+	action(c.id, context.Background(), s, time.Now())
+
 	v := &SetVolume{Volume: c.targetVolume}
 	action(c.id, context.Background(), v, time.Now())
 
@@ -224,18 +232,11 @@ func (c *client) start() {
 
 func (c *client) heapThread() {
 	for {
-		deadline := c.heap.nextDeadline()
-		if c.nextGetURL.After(deadline) {
-			// Don't dequeue a message until a little bit of time has passed
-			// since we sent the last one to this client.
-			deadline = c.nextGetURL
-		}
-
 		select {
 		case msg := <-c.heapChannel:
 			heap.Push(c.heap, msg)
 			continue
-		case <-time.After(time.Until(deadline)):
+		case <-time.After(time.Until(c.heap.nextDeadline())):
 			// there's at least one message ready to dequeue
 		}
 
@@ -297,21 +298,25 @@ type Play struct {
 	Jitter	time.Duration
 }
 
-// Sleep for the expected duration of this command.
+// The expected duration of this command.
 // This is an unfortunate hack given the synchronous web server on the client.
-func (r *Play) SleepForDuration() {
+func (r *Play) Duration() time.Duration {
 	reps := r.Reps
 	if reps == 0 {
 		reps = 1
 	}
 	d := (r.File.Duration + r.Delay.Seconds()) * float64(reps)
-	time.Sleep(time.Duration(d * float64(time.Second)))
+	return time.Duration(d * float64(time.Second))
 }
 
 func (r *Play) handle(ctx context.Context, c *client) error {
-	log.Infof("%s playing %2d/%2d (%d reps, %d delay, %d jitter)",
-            *c, r.File.Folder, r.File.File, r.Reps, r.Delay.Milliseconds(), r.Jitter.Milliseconds())
+	log.Infof("%s playing %2d/%2d (%d reps, %d delay, %d jitter, expected time %.2f sec)",
+            *c, r.File.Folder, r.File.File, r.Reps, r.Delay.Milliseconds(), r.Jitter.Milliseconds(),
+            r.Duration().Seconds())
 
+	if r.Reps == 0 {
+		return nil
+	}
 	volume := r.Volume
 	if volume == 0 {
 		volume = c.targetVolume
@@ -348,12 +353,12 @@ type Blink struct {
 	Reps   int
 }
 
-// Sleep for the expected duration of this command.
+// The expected duration of this command.
 // This is an unfortunate hack given the synchronous web server on the client.
-func (r *Blink) SleepForDuration() {
+func (r *Blink) Duration() time.Duration {
 	pause := ((256.0 / r.Speed) * 2.0) + float64(r.Delay.Milliseconds())
 	pause *= float64(r.Reps)
-	time.Sleep(time.Duration(pause * float64(time.Millisecond)))
+	return time.Duration(pause * float64(time.Millisecond))
 }
 
 func (r *Blink) handle(ctx context.Context, c *client) error {
@@ -439,7 +444,6 @@ func (r *DrainQueue) handle(ctx context.Context, c *client) error {
 		return nil
 	}
 
-	log.Infof("%v %v queue length is %v", *c, r.Type, p) // XXX
 	action(c.id, ctx, r, retryTime)
 	return nil
 }
@@ -455,6 +459,12 @@ func (c *client) getURL(ctx context.Context, command string, args ...string) (st
 	descArgs := strings.Join(args, ",")
 	if descArgs != "" {
 		desc = desc + " (" + descArgs + ")"
+	}
+
+	now := time.Now()
+	if now.Before(c.nextGetURL) {
+		dur := c.nextGetURL.Sub(now)
+		<-time.After(dur)
 	}
 
 	getURLFailure := func(err error, message string) (string, error) {

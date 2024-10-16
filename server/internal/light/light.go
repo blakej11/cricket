@@ -7,10 +7,13 @@ import (
 	"github.com/blakej11/cricket/internal/client"
 	"github.com/blakej11/cricket/internal/effect"
 	"github.com/blakej11/cricket/internal/lease"
+	_ "github.com/blakej11/cricket/internal/log"
+	"github.com/blakej11/cricket/internal/types"
 )
 
 func init() {
 	effect.RegisterAlgorithm(lease.Light, "darkness", &darkness{})
+	effect.RegisterAlgorithm(lease.Light, "blink", &blink{})
 	effect.RegisterAlgorithm(lease.Light, "unison", &unison{})
 }
 
@@ -35,22 +38,53 @@ func (d *darkness) Run(ctx context.Context, params effect.AlgParams) {
 // blink causes crickets to blink out of sync with each other.
 type blink struct {}
 
-// for each cricket in the set:
-// - choose a random amount of time, wait that amount, then blink once
-// - slowly decrease the max delay, so they're lighting up more often
+func (b *blink) GetRequirements() effect.AlgRequirements {
+	return effect.AlgRequirements{
+		Parameters:	[]string{"blinkSpeed", "blinkDelay"},
+	}
+}
+
+func (b *blink) Run(ctx context.Context, params effect.AlgParams) {
+	blinkSpeed := params.Parameters["blinkSpeed"]
+	blinkDelay := params.Parameters["blinkDelay"]
+
+	for _, c := range params.Clients {
+		go func() {
+			// The blink delay might be a changing variable,
+			// and the changes aren't thread safe.
+			delay := *blinkDelay
+			delay.Reset()
+			clients := []types.ID{c}
+
+			for ctx.Err() == nil {
+				dur := delay.Duration()
+				time.Sleep(dur)
+				cmd := &client.Blink{
+					Speed:	blinkSpeed.Float64(),
+					Delay:	0,
+					Jitter:	0,
+					Reps:	1,
+				}
+				client.Action(clients, ctx, cmd, time.Now())
+				time.Sleep(cmd.Duration())
+			}
+		}()
+	}
+	<-ctx.Done()
+}
 
 // ---------------------------------------------------------------------
 
 // unison causes all crickets to flash in unison.
 type unison struct {}
 
-func (b *unison) GetRequirements() effect.AlgRequirements {
+func (u *unison) GetRequirements() effect.AlgRequirements {
 	return effect.AlgRequirements{
 		Parameters:	[]string{"blinkSpeed", "blinkDelay", "blinkReps", "groupDelay", "groupReps"},
 	}
 }
 
-func (b *unison) Run(ctx context.Context, params effect.AlgParams) {
+func (u *unison) Run(ctx context.Context, params effect.AlgParams) {
 	blinkSpeed := params.Parameters["blinkSpeed"]
 	blinkDelay := params.Parameters["blinkDelay"]
 	blinkReps := params.Parameters["blinkReps"]
@@ -68,7 +102,7 @@ func (b *unison) Run(ctx context.Context, params effect.AlgParams) {
 			Reps:	blinkReps.Int(),
 		}
 		client.Action(params.Clients, ctx, cmd, time.Now())
-		cmd.SleepForDuration()
+		time.Sleep(cmd.Duration())
 		time.Sleep(groupDelay.Duration())
 		groupReps--
 	}

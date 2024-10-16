@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	StartupDelay	random.Config
 	Delay		random.Config
 	Weights		map[string]float64
 }
@@ -27,6 +28,7 @@ type weightedEffect struct {
 
 type Player struct {
 	ty		lease.Type
+	startupDelay	*random.Variable
 	delay		*random.Variable
 	effects		[]*weightedEffect
 }
@@ -34,6 +36,7 @@ type Player struct {
 func New(ty lease.Type, config Config, effects map[string]*effect.Effect) (*Player, error) {
 	player := &Player{
 		ty:		ty,
+		startupDelay:	random.New(config.StartupDelay),
 		delay:		random.New(config.Delay),
 		effects:	[]*weightedEffect{},
 	}
@@ -73,6 +76,12 @@ func (p *Player) pickEffect() *weightedEffect {
 }
 
 func (p *Player) start() {
+	startupDelay := p.startupDelay.Float64()
+	if startupDelay > 0 {
+		log.Infof("%v player sleeping for %.2f seconds before starting", p.ty, startupDelay)
+		time.Sleep(time.Duration(startupDelay * float64(time.Second)))
+	}
+
 	for {
 		eff := p.pickEffect()
 

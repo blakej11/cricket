@@ -38,23 +38,24 @@ type Variable struct {
 	mean		float64
 	variance	float64
 
-	r		*rand.Rand
-
 	// these are only used if config.Changes is non-nil
 	lastUpdateTime	time.Time
 	curChangeIndex	int
-	curDuration	float64
+	curDelta	Delta
 }
 
 func New(c Config) *Variable {
-	r := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
+	var curDelta Delta
+	if len(c.Changes) > 0 {
+		curDelta = c.Changes[0]
+	}
 	return &Variable{
 		config:		c,
 		mean:		c.Mean,
 		variance:	c.Variance,
-		r:		r,
 		lastUpdateTime:	time.Time{},
 		curChangeIndex:	0,
+		curDelta:	curDelta,
 	}
 }
 
@@ -80,14 +81,17 @@ func (v *Variable) Float64() float64 {
 	if v.curChangeIndex < len(v.config.Changes) {
 		idx := v.curChangeIndex
 		t := time.Now()
-		d := float64(t.Sub(v.lastUpdateTime))
+		// How much time has elapsed since the last update?
+		d := t.Sub(v.lastUpdateTime).Seconds()
 
 		for {
-			dt := max(min(d, v.curDuration), 0.0)
-			v.curDuration -= dt
+			// Use the current Delta until it runs out.
+			delta := &v.curDelta
+			dt := max(min(d, delta.Duration), 0.0)
+			delta.Duration -= dt
 			d -= dt
 
-			delta := v.config.Changes[idx]
+			// Perform updates from this Delta.
 			v.mean += dt * delta.MeanDeltaRate
 			v.variance += dt * delta.VarDeltaRate
 
@@ -95,6 +99,7 @@ func (v *Variable) Float64() float64 {
 				break
 			}
 
+			// Pick a new Delta.
 			idx += 1
 			if idx == len(v.config.Changes) {
 				if !v.config.RepeatChanges {
@@ -102,7 +107,7 @@ func (v *Variable) Float64() float64 {
 				}
 				idx = 0
 			}
-			v.curDuration = v.config.Changes[idx].Duration
+			v.curDelta = v.config.Changes[idx]
 		}
 		v.curChangeIndex = idx
 		v.lastUpdateTime = t
@@ -113,9 +118,9 @@ func (v *Variable) Float64() float64 {
 	default:
 		break
 	case Normal:
-		value += v.r.NormFloat64() * math.Sqrt(max(v.variance, 0.0))
+		value += rand.NormFloat64() * math.Sqrt(max(v.variance, 0.0))
 	case Uniform:
-		value += v.variance * v.r.Float64() - v.variance / 2.0
+		value += v.variance * rand.Float64() - v.variance / 2.0
 	}
 	return max(value, 0.0)
 }

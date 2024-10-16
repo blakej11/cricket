@@ -2,18 +2,22 @@ package sound
 
 import (
 	"context"
+	"math"
 	"sort"
 	"time"
 
 	"github.com/blakej11/cricket/internal/client"
 	"github.com/blakej11/cricket/internal/effect"
 	"github.com/blakej11/cricket/internal/lease"
+	"github.com/blakej11/cricket/internal/log"
+	"github.com/blakej11/cricket/internal/types"
 )
 
 func init() {
 	effect.RegisterAlgorithm(lease.Sound, "silence", &silence{})
 	effect.RegisterAlgorithm(lease.Sound, "nonrandom", &nonrandom{})
 	effect.RegisterAlgorithm(lease.Sound, "loop", &loop{})
+	effect.RegisterAlgorithm(lease.Sound, "shuffle", &shuffle{})
 }
 
 // ---------------------------------------------------------------------
@@ -60,19 +64,19 @@ func (n *nonrandom) Run(ctx context.Context, params effect.AlgParams) {
 		cmd := &client.Play{
 			File: f,
 			Volume: 0, // default
-			Reps: 8,
+			Reps: 1,
 			Delay: 0,
 			Jitter: 0,
 		}
 		client.Action(params.Clients, ctx, cmd, time.Now())
-		cmd.SleepForDuration()
+		time.Sleep(cmd.Duration())
 		time.Sleep(groupDelay.Duration())
 	}
 }
 
 // ---------------------------------------------------------------------
 
-// loop plays one of a set of sounds.
+// loop plays one of a set of sounds out of all clients at ~the same time.
 type loop struct {}
 
 func (l *loop) GetRequirements() effect.AlgRequirements {
@@ -88,17 +92,63 @@ func (l *loop) Run(ctx context.Context, params effect.AlgParams) {
 	fileDelay := params.Parameters["fileDelay"]
 	groupDelay := params.Parameters["groupDelay"]
 
+	clients := params.Clients
+
 	for ctx.Err() == nil {
+		file := fileSet.Pick()
+		reps := fileReps.Int()
+
+		fileDur := file.Duration + fileDelay.MeanDuration().Seconds()
+		if deadline, ok := ctx.Deadline(); ok {
+			remaining := max(deadline.Sub(time.Now()).Seconds(), 0.0)
+			newReps := min(reps, int(math.Floor(remaining / fileDur)))
+			if reps != newReps {
+				log.Infof("cutting short %d/%d play: %d reps rather than %d",
+				    file.Folder, file.File, newReps, reps)
+				reps = newReps
+			}
+		}
+		if reps == 0 {
+			reps = 1
+		}
+
 		cmd := &client.Play{
-			File:   fileSet.Pick(),
+			File:   file,
 			Volume: 0, // use default
-			Reps:   fileReps.Int(),
+			Reps:   reps,
 			Delay:	fileDelay.MeanDuration(),
 			Jitter:	fileDelay.VarianceDuration(),
 		}
-		client.Action(params.Clients, ctx, cmd, time.Now())
-		cmd.SleepForDuration()
-		time.Sleep(groupDelay.Duration())
+		client.Action(clients, ctx, cmd, time.Now())
+
+		dur := time.Duration(cmd.Duration() + groupDelay.Duration())
+		sleepTimer := time.NewTimer(dur)
+		select {
+			case <-sleepTimer.C:
+		}
 	}
+}
+
+// ---------------------------------------------------------------------
+
+// shuffle plays one of a set of sounds out of a set of clients, but
+// with no file-level synchronization between clients.
+type shuffle struct {}
+
+func (s *shuffle) GetRequirements() effect.AlgRequirements {
+	l := &loop{}
+	return l.GetRequirements()
+}
+
+func (s *shuffle) Run(ctx context.Context, params effect.AlgParams) {
+	l := &loop{}
+	for _, c := range params.Clients {
+		go func() {
+			p := params
+			p.Clients = []types.ID{c}
+			l.Run(ctx, p)
+		}()
+	}
+	<-ctx.Done()
 }
 
