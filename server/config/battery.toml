@@ -1,0 +1,63 @@
+DefaultVolume = 1
+
+[Clients]
+64e8338918b40000 = { Name = "01" }
+64e8338492e40000 = { Name = "02" }
+64e8338553940000 = { Name = "03" }
+64e83384b8880000 = { Name = "04" }
+64e83384c7f00000 = { Name = "05" }
+64e8338682400000 = { Name = "06" }
+64e833868a100000 = { Name = "07" }
+64e83383eee40000 = { Name = "08" }
+64e833841c900000 = { Name = "09" }
+64e8338589840000 = { Name = "10" }
+64e833863cf40000 = { Name = "11" }
+64e833848b180000 = { Name = "12" }
+64e83386ac2c0000 = { Name = "13" }
+64e8338980500000 = { Name = "14" }
+64e8338580540000 = { Name = "15" }
+64e83385929c0000 = { Name = "16" }
+64e8338499e40000 = { Name = "17" }
+64e8338682f80000 = { Name = "18" }
+64e83386a7a80000 = { Name = "19" }
+64e8338447200000 = { Name = "20" }
+64e8338401540000 = { Name = "21" }
+64e8338572140000 = { Name = "22" }
+64e8338419a40000 = { Name = "23" }
+64e8338453400000 = { Name = "24" }
+5432048637f80000 = { Name = "25" }
+54320488861c0000 = { Name = "26" }
+64e83385652c0000 = { Name = "27" }
+64e833855f300000 = { Name = "28" }
+64e83386afcc0000 = { Name = "29" }
+64e833868e040000 = { Name = "30" }
+64e833855c6c0000 = { Name = "31" }
+64e8338493700000 = { Name = "32" }
+64e8338697e00000 = { Name = "33" }
+64e83383fde40000 = { Name = "34" }
+64e83384a8a40000 = { Name = "35" }
+64e833855d340000 = { Name = "36" }
+64e83384f5f80000 = { Name = "37" }
+
+[Effects.darkness]
+Algorithm             = "darkness"
+Duration              = { Mean = 300 }
+Lease.MinClients      = 1
+Lease.Type            = "light"
+Lease.FleetFraction   = { Mean = 0.5 }
+
+[Effects.silence]
+Algorithm             = "silence"
+Duration              = { Mean = 60 }
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5 }
+
+[Players.light]
+Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
+StartupDelay = { Mean = 100 }
+Weights      = { darkness = 1 }
+
+[Players.sound]
+Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
+Weights      = { silence = 1 }

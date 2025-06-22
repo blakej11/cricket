@@ -1,0 +1,139 @@
+DefaultVolume = 24
+
+[Clients]
+64e83383e1e40000 = { name = "38" }
+64e833845cd00000 = { name = "39" }
+64e833857f040000 = { name = "40" }
+
+[Files]
+"internet cricket" =             { folder =  1, file =  1, duration =  10.032000 }
+"eggshaker" =                    { folder =  2, file =  1, duration =  21.133061 }
+"eggshaker_alt1" =               { folder =  2, file =  2, duration =  28.342857 }
+"eggshaker_alt2" =               { folder =  2, file =  3, duration =  50.599184 }
+"morsecrack1" =                  { folder =  3, file =  1, duration =  39.653878 }
+"morsecrack2" =                  { folder =  3, file =  2, duration =  24.189388 }
+"steadyboi1" =                   { folder =  4, file =  1, duration =  40.698776 }
+"steadyboi2" =                   { folder =  4, file =  2, duration =  18.834286 }
+"steadyboi3" =                   { folder =  4, file =  3, duration =  31.921633 }
+"steadyboi2_alt1" =              { folder =  4, file =  4, duration =  28.238367 }
+"steadyboi2_alt2" =              { folder =  4, file =  5, duration =  22.648163 }
+"steadyboi2_alt3" =              { folder =  4, file =  6, duration =  31.216327 }
+"waltz2" =                       { folder =  5, file =  2, duration =  18.599184 }
+"waltz3" =                       { folder =  5, file =  3, duration =  12.251429 }
+"waltz4" =                       { folder =  5, file =  4, duration =  13.531429 }
+"waltz5" =                       { folder =  5, file =  5, duration =  14.889796 }
+"waltz6" =                       { folder =  5, file =  6, duration =  13.818776 }
+"waltz7" =                       { folder =  5, file =  7, duration =  22.439184 }
+"waltz8" =                       { folder =  5, file =  8, duration =  35.631020 }
+"waltz9" =                       { folder =  5, file =  9, duration = 103.131429 }
+"waltz3_alt1" =                  { folder =  5, file = 10, duration =  13.975510 }
+"waltz4_alt1" =                  { folder =  5, file = 11, duration =  18.886531 }
+"waltz4_alt2" =                  { folder =  5, file = 12, duration =  18.520816 }
+"waltz5_alt1" =                  { folder =  5, file = 13, duration =  30.563265 }
+"waltz5_alt2" =                  { folder =  5, file = 14, duration =  38.922449 }
+"water1" =                       { folder =  6, file =  1, duration =  37.433469 }
+"water2" =                       { folder =  6, file =  2, duration =  36.179592 }
+"water3" =                       { folder =  6, file =  3, duration =  29.178776 }
+"water5" =                       { folder =  6, file =  5, duration =  19.173878 }
+"water6" =                       { folder =  6, file =  6, duration =  12.225306 }
+"cricketSpaceshipAttacking" =    { folder =  7, file =  1, duration =  31.921633 }
+"cricketSpaceship" =             { folder =  7, file =  2, duration =  31.921633 }
+"chirps/eggshaker_A" =           { folder =  8, file =  1, duration =   2.638367 }
+"chirps/eggshaker_B" =           { folder =  8, file =  2, duration =   6.974694 }
+"chirps/eggshaker_C" =           { folder =  8, file =  3, duration =   1.358367 }
+"chirps/eggshaker_D" =           { folder =  8, file =  4, duration =   4.048980 }
+"chirps/morsecrack_A" =          { folder =  8, file =  5, duration =   3.265306 }
+"chirp/waltz_B" =                { folder =  8, file = 14, duration =   0.705306 }
+"chirp/waltz_E" =                { folder =  8, file = 17, duration =   0.653061 }
+"chirp/waltz_F" =                { folder =  8, file = 18, duration =   0.574694 }
+"chirp/waltz_G" =                { folder =  8, file = 19, duration =   0.574694 }
+"chirp/waltz_H" =                { folder =  8, file = 20, duration =   0.470204 }
+"strings/C2" =                   { folder =  9, file =  1, duration =   7.053063 }
+"strings/G2" =                   { folder =  9, file =  2, duration =   7.053063 }
+"strings/D3" =                   { folder =  9, file =  3, duration =   7.053063 }
+"strings/A3" =                   { folder =  9, file =  4, duration =   7.053063 }
+"strings/E4" =                   { folder =  9, file =  5, duration =   7.053063 }
+"strings/B4" =                   { folder =  9, file =  6, duration =   7.053063 }
+"strings/Fsharp5" =              { folder =  9, file =  7, duration =   7.053063 }
+"strings/Csharp6" =              { folder =  9, file =  8, duration =   7.053063 }
+"strings/Gsharp6" =              { folder =  9, file =  9, duration =   7.053063 }
+"strings/Dsharp7" =              { folder =  9, file = 10, duration =   7.053063 }
+"raindrops/aluminumFoil" =       { folder = 10, file =  1, duration =  41.560875 }
+"raindrops/backOfPot" =          { folder = 10, file =  2, duration =  29.309438 }
+"raindrops/bathroomScale" =      { folder = 10, file =  3, duration =  36.571438 }
+"raindrops/bathtub" =            { folder = 10, file =  4, duration =  20.558375 }
+"raindrops/cardboardOrPlastic" = { folder = 10, file =  5, duration =  37.067813 }
+"raindrops/fakeLeaves" =         { folder = 10, file =  6, duration =  49.554313 }
+"raindrops/foldedUpTarp" =       { folder = 10, file =  7, duration =  35.813938 }
+"raindrops/fourLayerAluminum" =  { folder = 10, file =  8, duration =  27.559188 }
+"raindrops/glassOfWater" =       { folder = 10, file =  9, duration =  27.062875 }
+"raindrops/insideOfPot" =        { folder = 10, file = 10, duration =  30.929000 }
+"raindrops/paper" =              { folder = 10, file = 11, duration =  48.378813 }
+"raindrops/paperOnTowel" =       { folder = 10, file = 12, duration =  41.325750 }
+"raindrops/paperOnTowel2" =      { folder = 10, file = 13, duration =  65.201688 }
+"raindrops/plastic1" =           { folder = 10, file = 14, duration =  27.324125 }
+"raindrops/plastic2" =           { folder = 10, file = 15, duration =  36.075125 }
+"raindrops/rocks1" =             { folder = 10, file = 16, duration =  29.805750 }
+"raindrops/rocksLowflow1" =      { folder = 10, file = 17, duration =  46.053938 }
+"raindrops/rocksLowflow2" =      { folder = 10, file = 18, duration =  36.075125 }
+"raindrops/rocksHighflow" =      { folder = 10, file = 19, duration =  62.067000 }
+"raindrops/dirtLowflow" =        { folder = 10, file = 20, duration =  20.558375 }
+"raindrops/dirtHighflow" =       { folder = 10, file = 21, duration =  37.433500 }
+"raindrops/treeLeavesLowflow" =  { folder = 10, file = 22, duration =  36.571438 }
+"raindrops/treeLeavesHighflow" = { folder = 10, file = 23, duration =  47.699625 }
+"raindrops/pothosLowflow1" =     { folder = 10, file = 24, duration =  48.065313 }
+"raindrops/pothosLowflow2" =     { folder = 10, file = 25, duration =   7.862875 }
+"raindrops/pothosHighflow" =     { folder = 10, file = 26, duration =  54.569813 }
+"raindrops/fakeFlowersLowflow" = { folder = 10, file = 27, duration =  56.058813 }
+"raindrops/fakeFlowersHighflow1" = { folder = 10, file = 28, duration = 31.059625 }
+"raindrops/fakeFlowersHighflow2" = { folder = 10, file = 29, duration = 30.249813 }
+"raindrops/rocks2" =             { folder = 10, file = 16, duration =   11.807375 }
+"singleRaindrops/cardboard1" =   { folder = 11, file =  1, duration =  0.653063  }
+"singleRaindrops/cardboard2" =   { folder = 11, file =  2, duration =  0.548625  }
+"singleRaindrops/cardboard3" =   { folder = 11, file =  3, duration =  0.653063  }
+"singleRaindrops/cardboard4" =   { folder = 11, file =  4, duration =  0.470250  }
+"singleRaindrops/paper1" =       { folder = 11, file =  5, duration =  0.809813  }
+"singleRaindrops/paper2" =       { folder = 11, file =  6, duration =  0.653063  }
+"singleRaindrops/paper3" =       { folder = 11, file =  7, duration =  0.626938  }
+"singleRaindrops/paper4" =       { folder = 11, file =  8, duration =  0.862063  }
+"singleRaindrops/paper5" =       { folder = 11, file =  9, duration =  1.018813  }
+"singleRaindrops/paper6" =       { folder = 11, file = 10, duration =  0.548625  }
+"singleRaindrops/paper7" =       { folder = 11, file = 11, duration =  0.496375  }
+"singleRaindrops/paper8" =       { folder = 11, file = 12, duration =  0.626938  }
+
+[FileSets]
+"internet cricket" = { regex = "internet cricket" }
+
+[Effects."basic sound test"]
+Algorithm             = "loop"
+Duration              = { Mean = 30000 }
+FileSets.main         = "internet cricket"
+Lease.MaxClients      = 1
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Parameters.fileDelay  = { Mean = 0 }
+Parameters.fileReps   = { Mean = 1,  Variance = 0, Distribution = "normal" }
+Parameters.groupDelay = { Mean = 15, Variance = 0, Distribution = "normal" }
+
+[Effects.unison]
+Algorithm             = "unison"
+Duration              = { Mean = 30 }
+Lease.MinClients      = 1
+Lease.Type            = "light"
+Lease.FleetFraction   = { Mean = 1.0 }
+Lease.MaxWait         = { Mean = 30 }
+Parameters.blinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
+Parameters.blinkDelay = { Mean = 0.1, Variance = 0.05,Distribution = "uniform" }
+Parameters.blinkReps  = { Mean = 4,   Variance = 1,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
+Parameters.groupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }
+
+[Players.light]
+Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
+StartupDelay = { Mean = 0 }
+Weights      = { unison = 1 }
+
+[Players.sound]
+Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
+Weights      = { "basic sound test" = 1 }

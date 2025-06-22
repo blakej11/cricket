@@ -1,0 +1,255 @@
+DefaultVolume = 24
+
+[Clients]
+64e8338918b40000 = { Name = "01" }
+64e8338492e40000 = { Name = "02" }
+64e8338553940000 = { Name = "03" }
+64e83384b8880000 = { Name = "04" }
+64e83384c7f00000 = { Name = "05" }
+64e8338682400000 = { Name = "06" }
+64e833868a100000 = { Name = "07" }
+64e83383eee40000 = { Name = "08" }
+64e833841c900000 = { Name = "09" }
+64e8338589840000 = { Name = "10" }
+64e833863cf40000 = { Name = "11" }
+64e833848b180000 = { Name = "12" }
+64e83386ac2c0000 = { Name = "13" }
+64e8338980500000 = { Name = "14" }
+64e8338580540000 = { Name = "15" }
+64e83385929c0000 = { Name = "16" }
+64e8338499e40000 = { Name = "17" }
+64e8338682f80000 = { Name = "18" }
+64e83386a7a80000 = { Name = "19" }
+64e8338447200000 = { Name = "20" }
+64e8338401540000 = { Name = "21" }
+64e8338572140000 = { Name = "22" }
+64e8338419a40000 = { Name = "23" }
+64e8338453400000 = { Name = "24" }
+5432048637f80000 = { Name = "25" }
+54320488861c0000 = { Name = "26" }
+64e83385652c0000 = { Name = "27" }
+64e833855f300000 = { Name = "28" }
+64e83386afcc0000 = { Name = "29" }
+64e833868e040000 = { Name = "30" }
+64e833855c6c0000 = { Name = "31" }
+64e8338493700000 = { Name = "32" }
+64e8338697e00000 = { Name = "33" }
+64e83383fde40000 = { Name = "34" }
+64e83384a8a40000 = { Name = "35" }
+64e833855d340000 = { Name = "36" }
+64e83384f5f80000 = { Name = "37" }
+
+[Files]
+"internet cricket"        = { Folder = 1, File =  1, Duration =  10.032000 }
+eggshaker                 = { Folder = 2, File =  1, Duration =  21.133061 }
+eggshaker_alt1            = { Folder = 2, File =  2, Duration =  28.342857 }
+eggshaker_alt2            = { Folder = 2, File =  3, Duration =  50.599184 }
+morsecrack1               = { Folder = 3, File =  1, Duration =  39.653878 }
+morsecrack2               = { Folder = 3, File =  2, Duration =  24.189388 }
+steadyboi1                = { Folder = 4, File =  1, Duration =  40.698776 }
+steadyboi2                = { Folder = 4, File =  2, Duration =  18.834286 }
+steadyboi3                = { Folder = 4, File =  3, Duration =  31.921633 }
+steadyboi2_alt1           = { Folder = 4, File =  4, Duration =  28.238367 }
+steadyboi2_alt2           = { Folder = 4, File =  5, Duration =  22.648163 }
+steadyboi2_alt3           = { Folder = 4, File =  6, Duration =  31.216327 }
+waltz2                    = { Folder = 5, File =  2, Duration =  18.599184 }
+waltz3                    = { Folder = 5, File =  3, Duration =  12.251429 }
+waltz4                    = { Folder = 5, File =  4, Duration =  13.531429 }
+waltz5                    = { Folder = 5, File =  5, Duration =  14.889796 }
+waltz6                    = { Folder = 5, File =  6, Duration =  13.818776 }
+waltz7                    = { Folder = 5, File =  7, Duration =  22.439184 }
+waltz8                    = { Folder = 5, File =  8, Duration =  35.631020 }
+waltz9                    = { Folder = 5, File =  9, Duration = 103.131429 }
+waltz3_alt1               = { Folder = 5, File = 10, Duration =  13.975510 }
+waltz4_alt1               = { Folder = 5, File = 11, Duration =  18.886531 }
+waltz4_alt2               = { Folder = 5, File = 12, Duration =  18.520816 }
+waltz5_alt1               = { Folder = 5, File = 13, Duration =  30.563265 }
+waltz5_alt2               = { Folder = 5, File = 14, Duration =  38.922449 }
+water1                    = { Folder = 6, File =  1, Duration =  37.433469 }
+water2                    = { Folder = 6, File =  2, Duration =  36.179592 }
+water3                    = { Folder = 6, File =  3, Duration =  29.178776 }
+water5                    = { Folder = 6, File =  5, Duration =  19.173878 }
+water6                    = { Folder = 6, File =  6, Duration =  12.225306 }
+cricketSpaceshipAttacking = { Folder = 7, File =  1, Duration =  31.921633 }
+cricketSpaceship          = { Folder = 7, File =  2, Duration =  31.921633 }
+"chirps/eggshaker_A"      = { Folder = 8, File =  1, Duration =   2.638367 }
+"chirps/eggshaker_B"      = { Folder = 8, File =  2, Duration =   6.974694 }
+"chirps/eggshaker_C"      = { Folder = 8, File =  3, Duration =   1.358367 }
+"chirps/eggshaker_D"      = { Folder = 8, File =  4, Duration =   4.048980 }
+"chirps/morsecrack_A"     = { Folder = 8, File =  5, Duration =   3.265306 }
+"chirp/waltz_B"           = { Folder = 8, File = 14, Duration =   0.705306 }
+"chirp/waltz_E"           = { Folder = 8, File = 17, Duration =   0.653061 }
+"chirp/waltz_F"           = { Folder = 8, File = 18, Duration =   0.574694 }
+"chirp/waltz_G"           = { Folder = 8, File = 19, Duration =   0.574694 }
+"chirp/waltz_H"           = { Folder = 8, File = 20, Duration =   0.470204 }
+
+[FileSets]
+all                   = { Regex = ".*_alt.*" }
+chirp                 = { Regex = "^chirp/" }
+chirps                = { Regex = "^chirps/" }
+"eggshaker crickets"  = { Regex = "^eggshaker" }
+"internet cricket"    = { Regex = "internet cricket" }
+"morsecrack crickets" = { Regex = "^morsecrack" }
+spaceship             = { Regex = "^cricketSpaceship" }
+"steadyboi crickets"  = { Regex = "^steadyboi" }
+"waltz crickets"      = { Regex = "^waltz" }
+"water sounds"        = { Regex = "^water" }
+
+[Effects."all sounds"]
+Algorithm             = "nonrandom"
+Duration              = { Mean = 10000 }
+FileSets.main         = "all"
+Lease.MaxClients      = 1
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Parameters.groupDelay = { Mean = 2 }
+
+[Effects."basic sound test"]
+Algorithm             = "loop"
+Duration              = { Mean = 300, Variance = 100, Distribution = "uniform" }
+FileSets.main         = "internet cricket"
+Lease.MaxClients      = 1
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Parameters.fileDelay  = { Mean = 0 }
+Parameters.fileReps   = { Mean = 3, Variance = 2, Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2, Variance = 1, Distribution = "normal" }
+
+[Effects.blink]
+Algorithm             = "blink"
+Duration              = { Mean = 300, Variance = 300, Distribution = "normal" }
+Lease.MinClients      = 1
+Lease.Type            = "light"
+Lease.FleetFraction   = { Mean = 1.0 }
+Lease.MaxWait         = { Mean = 30 }
+Parameters.blinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
+
+[Effects.blink.Parameters.blinkDelay]
+Mean         = 20
+Variance     = 20
+Distribution = "uniform"
+Changes = [{ MeanDeltaRate = -0.0666, VarDeltaRate = -0.0666, Duration = 300 }]
+
+[Effects.darkness]
+Algorithm             = "darkness"
+Duration              = { Mean = 300 }
+Lease.MinClients      = 1
+Lease.Type            = "light"
+Lease.FleetFraction   = { Mean = 0.5 }
+
+[Effects.eggshaker]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "eggshaker crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.morsecrack]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "morsecrack crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.silence]
+Algorithm             = "silence"
+Duration              = { Mean = 45, Variance = 100, Distribution = "normal" }
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.2 }
+
+[Effects.spaceship]
+Algorithm             = "loop"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "spaceship"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.steadyboi]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "steadyboi crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.unison]
+Algorithm             = "unison"
+Duration              = { Mean = 30 }
+Lease.MinClients      = 1
+Lease.Type            = "light"
+Lease.FleetFraction   = { Mean = 1.0 }
+Lease.MaxWait         = { Mean = 30 }
+Parameters.blinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
+Parameters.blinkDelay = { Mean = 0.1, Variance = 0.05,Distribution = "uniform" }
+Parameters.blinkReps  = { Mean = 4,   Variance = 1,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
+Parameters.groupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }
+
+[Effects.waltz]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "waltz crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.water]
+Algorithm             = "loop"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "water sounds"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Players.light]
+Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
+StartupDelay = { Mean = 100 }
+
+[Players.light.Weights]
+blink    = 0.0
+darkness = 0.0
+unison   = 1.0
+
+[Players.sound]
+Delay = { Mean = 10, Variance = 10, Distribution = "uniform" }
+
+[Players.sound.Weights]
+"all sounds"       = 0
+"basic sound test" = 0
+eggshaker          = 1.0
+morsecrack         = 1.0
+silence            = 0
+spaceship          = 0.01
+steadyboi          = 1.0
+waltz              = 1.0
+water              = 0.5
