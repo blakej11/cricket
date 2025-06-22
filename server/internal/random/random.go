@@ -1,12 +1,49 @@
 package random
 
 import (
-	"encoding/json"
 	"math"
 	"math/rand/v2"
 	"strings"
 	"time"
 )
+
+// ---------------------------------------------------------------------
+
+type Distribution int
+const (
+	Unknown		Distribution = iota
+	Normal
+	Uniform
+)
+
+func (d *Distribution) unmarshalString(s string) {
+	switch strings.ToLower(s) {
+	default:
+		*d = Unknown
+	case "normal":
+		*d = Normal
+	case "uniform":
+		*d = Uniform
+	}
+}
+
+func (d Distribution) String() string {
+	switch (d) {
+	default:
+		return "unknown"
+	case Normal:
+		return "normal"
+	case Uniform:
+		return "uniform"
+	}
+}
+
+func (d *Distribution) UnmarshalText(b []byte) error {
+	d.unmarshalString(string(b))
+	return nil
+}
+
+// ---------------------------------------------------------------------
 
 // Config describes how to choose the value of a parameter.
 type Config struct {
@@ -16,13 +53,6 @@ type Config struct {
 	Changes		[]Delta
 	RepeatChanges	bool
 }
-
-type Distribution int
-const (
-	Unknown		Distribution = iota
-	Normal
-	Uniform
-)
 
 type Delta struct {
 	MeanDeltaRate	float64	// change in mean, per second
@@ -140,37 +170,3 @@ func (v *Variable) MeanDuration() time.Duration {
 func (v *Variable) VarianceDuration() time.Duration {
 	return time.Duration(v.variance * float64(time.Second))
 }
-
-// ---------------------------------------------------------------------
-
-func (d *Distribution) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	switch strings.ToLower(s) {
-	default:
-		*d = Unknown
-	case "normal":
-		*d = Normal
-	case "uniform":
-		*d = Uniform
-	}
-
-	return nil
-}
-
-func (d Distribution) MarshalJSON() ([]byte, error) {
-	var s string
-	switch d {
-	default:
-		s = "unknown"
-	case Normal:
-		s = "normal"
-	case Uniform:
-		s = "uniform"
-	}
-
-	return json.Marshal(s)
-}
-

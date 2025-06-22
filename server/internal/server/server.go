@@ -1,7 +1,6 @@
-package config
+package server
 
 import (
-	"encoding/json"
 	"fmt"
 
         "github.com/blakej11/cricket/internal/client"
@@ -34,28 +33,10 @@ type ConfigImpl struct {
 	players		map[lease.Type]*player.Player
 }
 
-// If a parse error is encountered, show this many characters
-// before and after the parse.
-const jsonErrorDelta = 20
-
-func ParseJSON(jsonBlob []byte) (*ConfigImpl, error) {
-	var config Config
-	if err := json.Unmarshal(jsonBlob, &config); err != nil {
-		if jsonErr, ok := err.(*json.SyntaxError); ok {
-			minOff := jsonErr.Offset - jsonErrorDelta
-			minOff = max(minOff, 0)
-			maxOff := jsonErr.Offset + jsonErrorDelta
-			maxOff = min(maxOff, int64(len(jsonBlob)))
-			problemPart := jsonBlob[minOff:maxOff]
-			err = fmt.Errorf("%w ~ error near %q (offset %d)",
-			    err, problemPart, jsonErr.Offset)
-		}
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
-	}
-
+func (c *Config) New() (*ConfigImpl, error) {
 	fileSets := make(map[string]*fileset.Set)
-	for name, fs := range config.FileSets {
-		set, err := fileset.New(name, fs, config.Files)
+	for name, fs := range c.FileSets {
+		set, err := fileset.New(name, fs, c.Files)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse fileset %q: %w", name, err)
 		}
@@ -65,7 +46,7 @@ func ParseJSON(jsonBlob []byte) (*ConfigImpl, error) {
 	for _, t := range lease.ValidTypes() {
 		effects[t] = make(map[string]*effect.Effect)
 	}
-	for name, e := range config.Effects {
+	for name, e := range c.Effects {
 		effect, err := effect.New(name, e, fileSets)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse effect %q: %w", name, err)
@@ -74,7 +55,7 @@ func ParseJSON(jsonBlob []byte) (*ConfigImpl, error) {
 	}
 	players := make(map[lease.Type]*player.Player)
 	for _, t := range lease.ValidTypes() {
-		player, err := player.New(t, config.Players[t], effects[t])
+		player, err := player.New(t, c.Players[t], effects[t])
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse %v weights: %w", t, err)
 		}
@@ -82,8 +63,8 @@ func ParseJSON(jsonBlob []byte) (*ConfigImpl, error) {
 	}
 
 	return &ConfigImpl{
-		defaultVolume:	config.DefaultVolume,
-		clients:	config.Clients,
+		defaultVolume:	c.DefaultVolume,
+		clients:	c.Clients,
 		players:	players,
 	}, nil
 }

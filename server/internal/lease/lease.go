@@ -2,7 +2,6 @@ package lease
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -11,6 +10,46 @@ import (
 	"github.com/blakej11/cricket/internal/random"
 	"github.com/blakej11/cricket/internal/types"
 )
+
+type Type int
+const (
+	UnknownType Type = iota
+	Sound
+	Light
+)
+
+func ValidTypes() []Type {
+	return []Type{Sound, Light}
+}
+
+func (ty *Type) unmarshalString(s string) {
+	switch strings.ToLower(s) {
+	default:
+		*ty = UnknownType
+	case "sound":
+		*ty = Sound
+	case "light":
+		*ty = Light
+	}
+}
+
+func (ty Type) String() string {
+	switch (ty) {
+	default:
+		return "unknown"
+	case Sound:
+		return "sound"
+	case Light:
+		return "light"
+	}
+}
+
+func (ty *Type) UnmarshalText(b []byte) error {
+	ty.unmarshalString(string(b))
+	return nil
+}
+
+// ------------------------------------------------------------------
 
 // Config describes how many clients are needed/desired for an effect.
 type Config struct {
@@ -23,15 +62,6 @@ type Config struct {
 	// could request specific IDs I guess
 	// could request something w/r/t PhysLocation
 }
-
-type Type int
-const (
-	UnknownType Type = iota
-	Sound
-	Light
-)
-
-// ------------------------------------------------------------------
 
 // Params is the instantiation of a Config.
 type Params struct {
@@ -50,47 +80,6 @@ func New(c Config) Params {
 		fleetFraction: random.New(c.FleetFraction),
 		maxWait:       random.New(c.MaxWait),
 	}
-}
-
-func ValidTypes() []Type {
-	return []Type{Sound, Light}
-}
-
-func (ty Type) String() string {
-	switch (ty) {
-	default:
-		return "unknown"
-	case Sound:
-		return "sound"
-	case Light:
-		return "light"
-	}
-}
-
-func (ty *Type) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	switch strings.ToLower(s) {
-	default:
-		*ty = UnknownType
-	case "sound":
-		*ty = Sound
-	case "light":
-		*ty = Light
-	}
-
-	return nil
-}
-
-// needed to unmarshal a type as a map key
-func (ty *Type) UnmarshalText(b []byte) error {
-        return ty.UnmarshalJSON(b)
-}
-
-func (ty Type) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ty.String())
 }
 
 // ---------------------------------------------------------------------
