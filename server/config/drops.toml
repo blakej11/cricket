@@ -87,7 +87,7 @@ DefaultVolume = 24
 "raindrops/fakeFlowersLowflow" = { folder = 10, file = 27, duration =  56.058813 }
 "raindrops/fakeFlowersHighflow1" = { folder = 10, file = 28, duration = 31.059625 }
 "raindrops/fakeFlowersHighflow2" = { folder = 10, file = 29, duration = 30.249813 }
-"raindrops/rocks2" =             { folder = 10, file = 16, duration =   11.807375 }
+"raindrops/rocks2" =             { folder = 10, file = 30, duration =   11.807375 }
 "singleRaindrops/cardboard1" =   { folder = 11, file =  1, duration =  0.653063  }
 "singleRaindrops/cardboard2" =   { folder = 11, file =  2, duration =  0.548625  }
 "singleRaindrops/cardboard3" =   { folder = 11, file =  3, duration =  0.653063  }
