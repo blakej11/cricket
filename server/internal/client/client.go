@@ -23,7 +23,8 @@ func Add(id types.ID, loc types.NetLocation) {
 }
 
 // Request that some clients perform an action.
-func Action(ids []types.ID, ctx context.Context, req clientRequest, earliest time.Time) {
+func Action(ids []types.ID, ctx context.Context, req clientRequest, delay time.Duration) {
+	earliest := time.Now().Add(delay)
 	for _, id := range ids {
 		action(id, ctx, req, earliest)
 	}

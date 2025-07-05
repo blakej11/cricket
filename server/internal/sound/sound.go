@@ -68,7 +68,7 @@ func (n *nonrandom) Run(ctx context.Context, params effect.AlgParams) {
 			Delay: 0,
 			Jitter: 0,
 		}
-		client.Action(params.Clients, ctx, cmd, time.Now())
+		client.Action(params.Clients, ctx, cmd, 0)
 		time.Sleep(cmd.Duration())
 		time.Sleep(groupDelay.Duration())
 	}
@@ -119,7 +119,7 @@ func (l *loop) Run(ctx context.Context, params effect.AlgParams) {
 			Delay:	fileDelay.MeanDuration(),
 			Jitter:	fileDelay.VarianceDuration(),
 		}
-		client.Action(clients, ctx, cmd, time.Now())
+		client.Action(clients, ctx, cmd, 0)
 
 		dur := time.Duration(cmd.Duration() + groupDelay.Duration())
 		sleepTimer := time.NewTimer(dur)

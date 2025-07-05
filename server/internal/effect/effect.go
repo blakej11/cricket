@@ -124,7 +124,7 @@ func (e *Effect) drainQueue(clients []types.ID) {
 		Ack:	acks,
 		Type:	e.lease.Type,
 	}
-	client.Action(clients, context.Background(), &drain, time.Now())
+	client.Action(clients, context.Background(), &drain, 0)
 
 	start := time.Now()
 	now := start
