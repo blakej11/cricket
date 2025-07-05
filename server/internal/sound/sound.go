@@ -39,7 +39,8 @@ func (s *silence) Run(ctx context.Context, params effect.AlgParams) {
 
 // ---------------------------------------------------------------------
 
-// nonrandom plays one of a set of sounds.
+// "nonrandom" loops through all songs in the fileset and plays them,
+// from all clients, in order, at the same time.
 type nonrandom struct {}
 
 func (n *nonrandom) GetRequirements() effect.AlgRequirements {
@@ -76,7 +77,8 @@ func (n *nonrandom) Run(ctx context.Context, params effect.AlgParams) {
 
 // ---------------------------------------------------------------------
 
-// loop plays one of a set of sounds out of all clients at ~the same time.
+// "loop" picks random songs from the fileset and plays them,
+// from all clients, at the same time.
 type loop struct {}
 
 func (l *loop) GetRequirements() effect.AlgRequirements {
