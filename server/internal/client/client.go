@@ -300,20 +300,22 @@ type Play struct {
 }
 
 // The expected duration of this command.
-// This is an unfortunate hack given the synchronous web server on the client.
+// Doesn't take jitter into account, because that happens on the client.
 func (r *Play) Duration() time.Duration {
-	reps := r.Reps
-	if reps == 0 {
-		reps = 1
+	delay := r.Delay.Seconds()
+	d := (r.File.Duration + delay) * float64(r.Reps)
+	if (r.Reps > 0) {
+		d -= delay	// don't delay after the last one
 	}
-	d := (r.File.Duration + r.Delay.Seconds()) * float64(reps)
 	return time.Duration(d * float64(time.Second))
 }
 
 func (r *Play) handle(ctx context.Context, c *client) error {
+	delay := r.Delay.Milliseconds()
+	jitter := r.Jitter.Milliseconds()
+
 	log.Infof("%s playing %2d/%2d (%d reps, %d delay, %d jitter, expected time %.2f sec)",
-            *c, r.File.Folder, r.File.File, r.Reps, r.Delay.Milliseconds(), r.Jitter.Milliseconds(),
-            r.Duration().Seconds())
+            *c, r.File.Folder, r.File.File, r.Reps, delay, jitter, r.Duration().Seconds())
 
 	if r.Reps == 0 {
 		return nil
@@ -328,8 +330,8 @@ func (r *Play) handle(ctx context.Context, c *client) error {
 		fmt.Sprintf("file=%d", r.File.File),
 		fmt.Sprintf("volume=%d", volume),
 		fmt.Sprintf("reps=%d", r.Reps),
-		fmt.Sprintf("delay=%d", r.Delay.Milliseconds()),
-		fmt.Sprintf("jitter=%d", r.Jitter.Milliseconds()))
+		fmt.Sprintf("delay=%d", delay),
+		fmt.Sprintf("jitter=%d", jitter),
 	return err
 }
 
