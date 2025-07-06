@@ -291,14 +291,7 @@ Weights      = { darkness = 1, unison = 0 }
 
 [Players.sound]
 Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-StartupDelay = { Mean = 120 } # "20" is better for a single one, 120 for a fleet
+StartupDelay = { Mean = 20 } # "20" is better for a single one, 120 for a fleet
 
 [Players.sound.Weights]
-"basic sound test" = 0
-eggshaker          = 0.1
-morsecrack         = 0.1
-stormdrops         = 0
-stormclips         = 0.55
-steadyboi          = 0.1
-waltz              = 0.1
-water              = 0.05
+stormdrops         = 1
