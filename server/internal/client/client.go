@@ -22,28 +22,52 @@ func Add(id types.ID, loc types.NetLocation) {
 	enqueueAdminMessage(&addClientMessage{id: id, location: loc})
 }
 
-// Request that some clients perform an action.
-func Action(ids []types.ID, ctx context.Context, req clientRequest, delay time.Duration) {
-	earliest := time.Now().Add(delay)
+// Request that some clients perform an action, at some delay from now.
+func EnqueueAfterDelay(ids []types.ID, ctx context.Context, req clientRequest, delay time.Duration) {
 	for _, id := range ids {
-		action(id, ctx, req, earliest)
+		action(mustGetClient(id), ctx, req, delay, fromNow)
 	}
+}
+
+// Request that some clients perform an action, at some delay from the
+// end of the last enqueued sound play request.
+func EnqueueAfterSoundEnds(ids []types.ID, ctx context.Context, req clientRequest, delay time.Duration) {
+	for _, id := range ids {
+		action(mustGetClient(id), ctx, req, delay, fromEndOfSound)
+	}
+}
+
+// Returns the current time when the (server-side) sound queue will be
+// drained. This is not synchronized, so it's only a best guess.
+func HasSoundUntil(id types.ID) time.Time {
+	return mustGetClient(id).soundEndsTime
+}
+
+func mustGetClient(id types.ID) *client {
+	c, ok := data.clients[id]
+	if !ok {
+		log.Fatalf("can't execute request on nonexistent client %q", id)
+	}
+	return c
 }
 
 // Request that a single client perform some action.
 // The caller must have already obtained an appropriate lease for this client.
 // Errors are logged in the client, but not returned.
-func action(id types.ID, ctx context.Context, req clientRequest, earliest time.Time) {
-	c, ok := data.clients[id]
-	if !ok {
-		log.Fatalf("can't execute request on nonexistent client %q", id)
-	}
+func action(c *client, ctx context.Context, req clientRequest, delay time.Duration, fromWhen heapDeadline) {
 	c.heapChannel <- clientMessage{
 		ctx:		ctx,
 		clientRequest:	req,
-		earliest:	earliest,
+		delay:		delay,
+		fromWhen:	fromWhen,
 	}
 }
+
+type heapDeadline int
+const (
+	fromNow heapDeadline = iota
+	fromEndOfSound
+)
 
 // ---------------------------------------------------------------------
 
@@ -131,6 +155,7 @@ func (r *addClientMessage) handle() {
 		heap:		&clientMessageHeap{},
 
 		creation:	time.Now(),
+		soundEndsTime:	time.Now(),
 
 		targetVolume:	data.defaultVolume,
 	}
@@ -168,6 +193,10 @@ type client struct {
         voltage		float32
 
         targetVolume    int
+
+	// these fields are updated by client API callers,
+	// and thus need to be synchronized
+        soundEndsTime	time.Time
 }
 
 func (c client) String() string {
@@ -177,7 +206,86 @@ func (c client) String() string {
 type clientMessage struct {
 	ctx		context.Context
 	clientRequest
+	delay		time.Duration
+	fromWhen	heapDeadline
+
+	// this field is only used by the heap.
 	earliest	time.Time
+}
+
+func (c *client) start() {
+	go c.heapThread()
+	go c.deviceThread()
+
+	s := &Stop{}
+	action(c, context.Background(), s, 0, fromNow)
+
+	v := &SetVolume{Volume: c.targetVolume}
+	action(c, context.Background(), v, 0, fromNow)
+
+	k := &KeepVoltageUpdated{}
+	action(c, context.Background(), k, voltageUpdateDelay, fromNow)
+}
+
+// ---------------------------------------------------------------------
+// The following code is only run from the heapThread.
+
+// The heapThread maintains the heap of messages, and sends them along
+// to the deviceThread when (a) there's a message that's ready to send,
+// and (b) the deviceThread is ready to receive a message.
+func (c *client) heapThread() {
+	for {
+		select {
+		case msg := <-c.heapChannel:
+			c.pushHeap(msg)
+			continue
+		case <-time.After(time.Until(c.heap.nextDeadline())):
+			// there's at least one message ready to dequeue
+		}
+
+		poppedMsg := c.popHeap()
+		if poppedMsg.ctx.Err() != nil {
+			log.Infof("%v: discarding expired message: %v", *c, poppedMsg.ctx.Err())
+			continue
+		}
+
+		select {
+		case msg := <-c.heapChannel:
+			// deviceThread was blocked while we were trying to
+			// send the popped message to it, and another message
+			// arrived on the heap channel in the meantime. Put
+			// both messages back on the heap and try again. This
+			// ensures that a stuck client won't block any effect
+			// that's trying to communicate with it.
+			c.pushHeap(msg)
+			c.pushHeap(poppedMsg)
+		case c.deviceChannel <- poppedMsg:
+			// Successfully sent the popped message.
+		}
+	}
+}
+
+func (c *client) pushHeap(msg clientMessage) {
+	if msg.earliest.IsZero() {
+		switch msg.fromWhen {
+		case fromNow:
+			msg.earliest = time.Now().Add(msg.delay)
+		case fromEndOfSound:
+			msg.earliest = c.soundEndsTime.Add(msg.delay)
+		}
+		if play, ok := msg.clientRequest.(*Play); ok {
+			thisEndTime := msg.earliest.Add(play.Duration())
+			if c.soundEndsTime.Before(thisEndTime) {
+				c.soundEndsTime = thisEndTime
+			}
+		}
+	}
+
+	heap.Push(c.heap, msg)
+}
+
+func (c *client) popHeap() clientMessage {
+	return heap.Pop(c.heap).(clientMessage)
 }
 
 type clientMessageHeap []clientMessage
@@ -217,48 +325,8 @@ func (h *clientMessageHeap) nextDeadline() time.Time {
 	return (*h)[0].earliest
 }
 
-func (c *client) start() {
-	go c.heapThread()
-	go c.deviceThread()
-
-	s := &Stop{}
-	action(c.id, context.Background(), s, time.Now())
-
-	v := &SetVolume{Volume: c.targetVolume}
-	action(c.id, context.Background(), v, time.Now())
-
-	k := &KeepVoltageUpdated{}
-	action(c.id, context.Background(), k, time.Now().Add(voltageUpdateDelay))
-}
-
-func (c *client) heapThread() {
-	for {
-		select {
-		case msg := <-c.heapChannel:
-			heap.Push(c.heap, msg)
-			continue
-		case <-time.After(time.Until(c.heap.nextDeadline())):
-			// there's at least one message ready to dequeue
-		}
-
-		poppedMsg := heap.Pop(c.heap).(clientMessage)
-		if poppedMsg.ctx.Err() != nil {
-			log.Infof("%v: discarding expired message: %v", *c, poppedMsg.ctx.Err())
-			continue
-		}
-
-		select {
-		case msg := <-c.heapChannel:
-			// We got another incoming message before we were
-			// able to push this one to the device channel.
-			// Try again.
-			heap.Push(c.heap, msg)
-			heap.Push(c.heap, poppedMsg)
-		case c.deviceChannel <- poppedMsg:
-			// Successfully sent the popped message.
-		}
-	}
-}
+// ------------------------------------------------------------------
+// The following code is only run from the deviceThread.
 
 func (c *client) deviceThread() {
 	for {
@@ -271,9 +339,6 @@ func (c *client) deviceThread() {
 		}
 	}
 }
-
-// ------------------------------------------------------------------
-// The following code is only run from the deviceThread.
 
 // The commands that a client can handle implement this interface.
 type clientRequest interface {
@@ -331,7 +396,7 @@ func (r *Play) handle(ctx context.Context, c *client) error {
 		fmt.Sprintf("volume=%d", volume),
 		fmt.Sprintf("reps=%d", r.Reps),
 		fmt.Sprintf("delay=%d", delay),
-		fmt.Sprintf("jitter=%d", jitter),
+		fmt.Sprintf("jitter=%d", jitter))
 	return err
 }
 
@@ -397,15 +462,14 @@ func (r *Stop) handle(ctx context.Context, c *client) error {
 type KeepVoltageUpdated struct {}
 
 func (r *KeepVoltageUpdated) handle(ctx context.Context, c *client) error {
-	retryTime := time.Now().Add(voltageUpdateDelay)
 	body, err := c.getURL(ctx, "battery")
 	if err != nil {
-		action(c.id, ctx, r, retryTime)
+		action(c, ctx, r, voltageUpdateDelay, fromNow)
 		return err
 	}
 	p, err := strconv.ParseFloat(strings.TrimSpace(body), 32)
 	if err != nil {
-		action(c.id, ctx, r, retryTime)
+		action(c, ctx, r, voltageUpdateDelay, fromNow)
 		return err
 	}
 
@@ -413,7 +477,7 @@ func (r *KeepVoltageUpdated) handle(ctx context.Context, c *client) error {
 	c.lastVoltageUpdate = time.Now()
 	log.Infof("%v voltage is %.2f", c, p)
 
-	action(c.id, ctx, r, retryTime)
+	action(c, ctx, r, voltageUpdateDelay, fromNow)
 	return nil
 }
 
@@ -431,15 +495,14 @@ func (r *DrainQueue) handle(ctx context.Context, c *client) error {
 		url = "lightpending"
 	}
 
-	retryTime := time.Now().Add(transientDelay)
 	body, err := c.getURL(ctx, url)
 	if err != nil {
-		action(c.id, ctx, r, retryTime)
+		action(c, ctx, r, transientDelay, fromNow)
 		return err
 	}
 	p, err := strconv.ParseInt(strings.TrimSpace(body), 10, 32)
 	if err != nil {
-		action(c.id, ctx, r, retryTime)
+		action(c, ctx, r, transientDelay, fromNow)
 		return err
 	}
 	if int(p) == 0 {
@@ -447,7 +510,7 @@ func (r *DrainQueue) handle(ctx context.Context, c *client) error {
 		return nil
 	}
 
-	action(c.id, ctx, r, retryTime)
+	action(c, ctx, r, transientDelay, fromNow)
 	return nil
 }
 

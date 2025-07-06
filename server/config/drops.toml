@@ -1,6 +1,43 @@
-DefaultVolume = 24
+DefaultVolume = 48
 
 [Clients]
+64e8338918b40000 = { Name = "01" }
+64e8338492e40000 = { Name = "02" }
+64e8338553940000 = { Name = "03" }
+64e83384b8880000 = { Name = "04" }
+64e83384c7f00000 = { Name = "05" }
+64e8338682400000 = { Name = "06" }
+64e833868a100000 = { Name = "07" }
+64e83383eee40000 = { Name = "08" }
+64e833841c900000 = { Name = "09" }
+64e8338589840000 = { Name = "10" }
+64e833863cf40000 = { Name = "11" }
+64e833848b180000 = { Name = "12" }
+64e83386ac2c0000 = { Name = "13" }
+64e8338980500000 = { Name = "14" }
+64e8338580540000 = { Name = "15" }
+64e83385929c0000 = { Name = "16" }
+64e8338499e40000 = { Name = "17" }
+64e8338682f80000 = { Name = "18" }
+64e83386a7a80000 = { Name = "19" }
+64e8338447200000 = { Name = "20" }
+64e8338401540000 = { Name = "21" }
+64e8338572140000 = { Name = "22" }
+64e8338419a40000 = { Name = "23" }
+64e8338453400000 = { Name = "24" }
+5432048637f80000 = { Name = "25" }
+54320488861c0000 = { Name = "26" }
+64e83385652c0000 = { Name = "27" }
+64e833855f300000 = { Name = "28" }
+64e83386afcc0000 = { Name = "29" }
+64e833868e040000 = { Name = "30" }
+64e833855c6c0000 = { Name = "31" }
+64e8338493700000 = { Name = "32" }
+64e8338697e00000 = { Name = "33" }
+64e83383fde40000 = { Name = "34" }
+64e83384a8a40000 = { Name = "35" }
+64e833855d340000 = { Name = "36" }
+64e83384f5f80000 = { Name = "37" }
 64e83383e1e40000 = { name = "38" }
 64e833845cd00000 = { name = "39" }
 64e833857f040000 = { name = "40" }
@@ -58,16 +95,16 @@ DefaultVolume = 24
 "strings/Csharp6" =              { folder =  9, file =  8, duration =   7.053063 }
 "strings/Gsharp6" =              { folder =  9, file =  9, duration =   7.053063 }
 "strings/Dsharp7" =              { folder =  9, file = 10, duration =   7.053063 }
-"raindrops/aluminumFoil" =       { folder = 10, file =  1, duration =  41.560875 }
+# "raindrops/aluminumFoil" =       { folder = 10, file =  1, duration =  41.560875 }
 "raindrops/backOfPot" =          { folder = 10, file =  2, duration =  29.309438 }
-"raindrops/bathroomScale" =      { folder = 10, file =  3, duration =  36.571438 }
+# "raindrops/bathroomScale" =      { folder = 10, file =  3, duration =  36.571438 }
 "raindrops/bathtub" =            { folder = 10, file =  4, duration =  20.558375 }
 "raindrops/cardboardOrPlastic" = { folder = 10, file =  5, duration =  37.067813 }
 "raindrops/fakeLeaves" =         { folder = 10, file =  6, duration =  49.554313 }
 "raindrops/foldedUpTarp" =       { folder = 10, file =  7, duration =  35.813938 }
-"raindrops/fourLayerAluminum" =  { folder = 10, file =  8, duration =  27.559188 }
-"raindrops/glassOfWater" =       { folder = 10, file =  9, duration =  27.062875 }
-"raindrops/insideOfPot" =        { folder = 10, file = 10, duration =  30.929000 }
+# "raindrops/fourLayerAluminum" =  { folder = 10, file =  8, duration =  27.559188 }
+# "raindrops/glassOfWater" =       { folder = 10, file =  9, duration =  27.062875 }
+# "raindrops/insideOfPot" =        { folder = 10, file = 10, duration =  30.929000 }
 "raindrops/paper" =              { folder = 10, file = 11, duration =  48.378813 }
 "raindrops/paperOnTowel" =       { folder = 10, file = 12, duration =  41.325750 }
 "raindrops/paperOnTowel2" =      { folder = 10, file = 13, duration =  65.201688 }
@@ -87,34 +124,152 @@ DefaultVolume = 24
 "raindrops/fakeFlowersLowflow" = { folder = 10, file = 27, duration =  56.058813 }
 "raindrops/fakeFlowersHighflow1" = { folder = 10, file = 28, duration = 31.059625 }
 "raindrops/fakeFlowersHighflow2" = { folder = 10, file = 29, duration = 30.249813 }
-"raindrops/rocks2" =             { folder = 10, file = 30, duration =   11.807375 }
-"singleRaindrops/cardboard1" =   { folder = 11, file =  1, duration =  0.653063  }
-"singleRaindrops/cardboard2" =   { folder = 11, file =  2, duration =  0.548625  }
-"singleRaindrops/cardboard3" =   { folder = 11, file =  3, duration =  0.653063  }
-"singleRaindrops/cardboard4" =   { folder = 11, file =  4, duration =  0.470250  }
-"singleRaindrops/paper1" =       { folder = 11, file =  5, duration =  0.809813  }
-"singleRaindrops/paper2" =       { folder = 11, file =  6, duration =  0.653063  }
-"singleRaindrops/paper3" =       { folder = 11, file =  7, duration =  0.626938  }
-"singleRaindrops/paper4" =       { folder = 11, file =  8, duration =  0.862063  }
-"singleRaindrops/paper5" =       { folder = 11, file =  9, duration =  1.018813  }
-"singleRaindrops/paper6" =       { folder = 11, file = 10, duration =  0.548625  }
-"singleRaindrops/paper7" =       { folder = 11, file = 11, duration =  0.496375  }
-"singleRaindrops/paper8" =       { folder = 11, file = 12, duration =  0.626938  }
+"raindrops/rocks2" =             { folder = 10, file = 30, duration =  11.807375 }
+"singleRaindrops/cardboard1" =   { folder = 11, file =  1, duration =   0.653063 }
+"singleRaindrops/cardboard2" =   { folder = 11, file =  2, duration =   0.548625 }
+"singleRaindrops/cardboard3" =   { folder = 11, file =  3, duration =   0.653063 }
+"singleRaindrops/cardboard4" =   { folder = 11, file =  4, duration =   0.470250 }
+"singleRaindrops/paper1" =       { folder = 11, file =  5, duration =   0.809813 }
+"singleRaindrops/paper2" =       { folder = 11, file =  6, duration =   0.653063 }
+"singleRaindrops/paper3" =       { folder = 11, file =  7, duration =   0.626938 }
+"singleRaindrops/paper4" =       { folder = 11, file =  8, duration =   0.862063 }
+"singleRaindrops/paper5" =       { folder = 11, file =  9, duration =   1.018813 }
+"singleRaindrops/paper6" =       { folder = 11, file = 10, duration =   0.548625 }
+"singleRaindrops/paper7" =       { folder = 11, file = 11, duration =   0.496375 }
+"singleRaindrops/paper8" =       { folder = 11, file = 12, duration =   0.626938 }
 
 [FileSets]
-"internet cricket" = { regex = "internet cricket" }
+all                   = { Regex = ".*_alt.*" }
+chirp                 = { Regex = "^chirp/" }
+chirps                = { Regex = "^chirps/" }
+"eggshaker crickets"  = { Regex = "^eggshaker" }
+"internet cricket"    = { Regex = "internet cricket" }
+"morsecrack crickets" = { Regex = "^morsecrack" }
+"raindrops"        = { regex = "^raindrops/" }
+"single"           = { regex = "^singleRaindrops/" }
+spaceship             = { Regex = "^cricketSpaceship" }
+"steadyboi crickets"  = { Regex = "^steadyboi" }
+"waltz crickets"      = { Regex = "^waltz" }
+"water sounds"        = { Regex = "^water" }
+
 
 [Effects."basic sound test"]
-Algorithm             = "loop"
+Algorithm             = "nonrandom"
 Duration              = { Mean = 30000 }
-FileSets.main         = "internet cricket"
+FileSets.main         = "raindrops"
 Lease.MaxClients      = 1
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
 Parameters.fileDelay  = { Mean = 0 }
 Parameters.fileReps   = { Mean = 1,  Variance = 0, Distribution = "normal" }
-Parameters.groupDelay = { Mean = 15, Variance = 0, Distribution = "normal" }
+Parameters.groupDelay = { Mean = 1, Variance = 0, Distribution = "normal" }
+
+[Effects.stormdrops]
+Algorithm             = "storm"
+Duration              = { Mean = 3600 }
+FileSets.main         = "single"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 1.0, Variance = 0.2, Distribution = "uniform" }
+Parameters.volumeMin            = { Mean = 24 }
+Parameters.volumeMax            = { Mean = 48 }
+Parameters.intensityDelta       = { Mean = 1, Variance = 50 }
+Parameters.intensityUpdateFreq  = { Mean = 2 }
+Parameters.intensityThreshold   = { Mean = 25 }
+Parameters.interDropDelayMin    = { Mean = 0 }
+Parameters.interDropDelayMax    = { Mean = 3 }
+Parameters.interDropDelayVarMin = { Mean = 0.1 }
+Parameters.interDropDelayVarMax = { Mean = 2 }
+Parameters.queueRefillThresh    = { Mean = 1.5 }
+Parameters.queueRefillFreq      = { Mean = 1 }
+
+[Effects.stormclips]
+Algorithm             = "storm"
+Duration              = { Mean = 3600 }
+FileSets.main         = "raindrops"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.6, Variance = 0.2, Distribution = "uniform" }
+Parameters.volumeMin            = { Mean = 24 }
+Parameters.volumeMax            = { Mean = 48 }
+Parameters.intensityDelta       = { Mean = 5, Variance = 50 }
+Parameters.intensityUpdateFreq  = { Mean = 2 }
+Parameters.intensityThreshold   = { Mean = 25 }
+Parameters.interDropDelayMin    = { Mean = 0 }
+Parameters.interDropDelayMax    = { Mean = 3 }
+Parameters.interDropDelayVarMin = { Mean = 0.1 }
+Parameters.interDropDelayVarMax = { Mean = 2 }
+Parameters.queueRefillThresh    = { Mean = 1.5 }
+Parameters.queueRefillFreq      = { Mean = 1 }
+
+[Effects.eggshaker]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "eggshaker crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.morsecrack]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "morsecrack crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.steadyboi]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "steadyboi crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.waltz]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "waltz crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.water]
+Algorithm             = "loop"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.main         = "water sounds"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+
+[Effects.darkness]
+Algorithm             = "darkness"
+Duration              = { Mean = 30000 }
+Lease.MinClients      = 1
+Lease.Type            = "light"
+Lease.FleetFraction   = { Mean = 0.5 }
 
 [Effects.unison]
 Algorithm             = "unison"
@@ -131,9 +286,19 @@ Parameters.groupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }
 
 [Players.light]
 Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-StartupDelay = { Mean = 0 }
-Weights      = { unison = 1 }
+StartupDelay = { Mean = 5000 }
+Weights      = { darkness = 1, unison = 0 }
 
 [Players.sound]
 Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-Weights      = { "basic sound test" = 1 }
+StartupDelay = { Mean = 120 } # "20" is better for a single one, 120 for a fleet
+
+[Players.sound.Weights]
+"basic sound test" = 0
+eggshaker          = 0.1
+morsecrack         = 0.1
+stormdrops         = 0
+stormclips         = 0.55
+steadyboi          = 0.1
+waltz              = 0.1
+water              = 0.05

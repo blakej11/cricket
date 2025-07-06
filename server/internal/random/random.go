@@ -94,6 +94,11 @@ func (v *Variable) Reset() {
 	*v = *New(v.config)
 }
 
+// XXX
+func (v *Variable) AdjustMean(delta float64) {
+	v.mean += delta
+}
+
 // Float64 calculates a new concrete float64 value from the given Variable.
 //
 // - For Uniform distributions, the value will be in the range

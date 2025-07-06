@@ -65,7 +65,7 @@ func (b *blink) Run(ctx context.Context, params effect.AlgParams) {
 					Jitter:	0,
 					Reps:	1,
 				}
-				client.Action(clients, ctx, cmd, 0)
+				client.EnqueueAfterDelay(clients, ctx, cmd, 0)
 				time.Sleep(cmd.Duration())
 			}
 		}()
@@ -101,7 +101,7 @@ func (u *unison) Run(ctx context.Context, params effect.AlgParams) {
 			Jitter:	blinkDelay.VarianceDuration(),
 			Reps:	blinkReps.Int(),
 		}
-		client.Action(params.Clients, ctx, cmd, 0)
+		client.EnqueueAfterDelay(params.Clients, ctx, cmd, 0)
 		time.Sleep(cmd.Duration())
 		time.Sleep(groupDelay.Duration())
 		groupReps--
