@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"net"
 )
 
@@ -12,8 +13,13 @@ type NetLocation struct {
         Port		int
 }
 
-// ID is the main way that clients are referred to.
-type ID string
+func (n NetLocation) Equal(o NetLocation) bool {
+	return n.Address.Equal(o.Address) && n.Port == o.Port
+}
+
+func (n NetLocation) String() string {
+	return fmt.Sprintf("%s:%d", n.Address, n.Port)
+}
 
 // Client describes configuration parameters for a single client.
 type Client struct {
@@ -27,4 +33,3 @@ type Client struct {
 type PhysLocation struct {
 	// Nothing right now.
 }
-

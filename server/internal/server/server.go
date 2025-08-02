@@ -8,8 +8,6 @@ import (
         "github.com/blakej11/cricket/internal/fileset"
         "github.com/blakej11/cricket/internal/lease"
 	_ "github.com/blakej11/cricket/internal/light"
-	"github.com/blakej11/cricket/internal/mdns"
-        "github.com/blakej11/cricket/internal/player"
 	_ "github.com/blakej11/cricket/internal/sound"
         "github.com/blakej11/cricket/internal/types"
 )
@@ -21,19 +19,17 @@ type Config struct {
 	Files		map[string]fileset.File
 	FileSets	map[string]fileset.Config
 	Effects		map[string]effect.Config
-	Players		map[lease.Type]player.Config
 }
 
 // ---------------------------------------------------------------------
 
-// ConfigImpl is the runtime version of Config.
-type ConfigImpl struct {
+// Server is the runtime version of Config.
+type Server struct {
 	defaultVolume	int
 	clients		map[types.ID]types.Client
-	players		map[lease.Type]*player.Player
 }
 
-func (c *Config) New() (*ConfigImpl, error) {
+func New(c Config) (*Server, error) {
 	fileSets := make(map[string]*fileset.Set)
 	for name, fs := range c.FileSets {
 		set, err := fileset.New(name, fs, c.Files)
@@ -42,38 +38,23 @@ func (c *Config) New() (*ConfigImpl, error) {
 		}
 		fileSets[name] = set
 	}
-	effects := make(map[lease.Type]map[string]*effect.Effect)
-	for _, t := range lease.ValidTypes() {
-		effects[t] = make(map[string]*effect.Effect)
-	}
 	for name, e := range c.Effects {
-		effect, err := effect.New(name, e, fileSets)
+		effect, l, err := effect.New(name, e, fileSets)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse effect %q: %w", name, err)
 		}
-		effects[e.Lease.Type][name] = effect
-	}
-	players := make(map[lease.Type]*player.Player)
-	for _, t := range lease.ValidTypes() {
-		player, err := player.New(t, c.Players[t], effects[t])
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse %v weights: %w", t, err)
-		}
-		players[t] = player
+		lease.Assign(l, effect)
 	}
 
-	return &ConfigImpl{
+	return &Server{
 		defaultVolume:	c.DefaultVolume,
 		clients:	c.Clients,
-		players:	players,
 	}, nil
 }
 
-func (c *ConfigImpl) Run() { 
-	client.Configure(c.defaultVolume, c.clients)
+func (s *Server) Start() { 
+	client.Configure(s.defaultVolume, s.clients)
 
-	mdns.Start()
-	for _, p := range c.players {
-		p.Start()
-	}
+	lease.Start()
+	client.Start()
 }

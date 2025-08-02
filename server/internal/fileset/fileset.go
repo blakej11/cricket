@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"regexp"
-	"time"
 )
 
 // Config describes a set of files that are operated on together.
@@ -21,12 +20,6 @@ type File struct {
 	// Should not include any delay imposed by the behavior of the client.
 	Duration	float64
 }
-
-func (f *File) SleepForDuration() {
-	time.Sleep(time.Duration(f.Duration * float64(time.Second)))
-}
-
-// ---------------------------------------------------------------------
 
 // Set is the runtime instantiation of a file set.
 type Set struct {
@@ -45,9 +38,7 @@ func New(name string, c Config, files map[string]File) (*Set, error) {
 			results = append(results, file)
 		}
 	}
-	return &Set{
-		files:	results,
-	}, nil
+	return &Set{files: results}, nil
 }
 
 func (f *Set) Pick() File {

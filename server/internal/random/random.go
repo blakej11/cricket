@@ -50,6 +50,7 @@ type Config struct {
 	Mean		float64
 	Variance	float64
 	Distribution	Distribution
+
 	Changes		[]Delta
 	RepeatChanges	bool
 }
@@ -58,6 +59,16 @@ type Delta struct {
 	MeanDeltaRate	float64	// change in mean, per second
 	VarDeltaRate	float64	// change in variance, per second
 	Duration	float64	// duration of these changes, in seconds
+}
+
+func (c Config) IsDefault() bool {
+	var def Config
+
+	return c.Mean == def.Mean &&
+	    c.Variance == def.Variance &&
+	    c.Distribution == def.Distribution &&
+	    len(c.Changes) == len(def.Changes) &&
+	    c.RepeatChanges == def.RepeatChanges
 }
 
 // ---------------------------------------------------------------------
@@ -89,6 +100,14 @@ func New(c Config) *Variable {
 	}
 }
 
+func FixedConfig(v float64) Config {
+	return Config{
+		Mean:         v,
+		Variance:     0.0,
+		Distribution: Uniform,
+	}
+}
+
 // Reset resets the random variable to its initial state.
 func (v *Variable) Reset() {
 	*v = *New(v.config)
@@ -110,43 +129,7 @@ func (v *Variable) AdjustMean(delta float64) {
 //
 // In all cases, the value returned will always be non-negative.
 func (v *Variable) Float64() float64 {
-	if v.lastUpdateTime.IsZero() {
-		v.lastUpdateTime = time.Now()
-	}
-	if v.curChangeIndex < len(v.config.Changes) {
-		idx := v.curChangeIndex
-		t := time.Now()
-		// How much time has elapsed since the last update?
-		d := t.Sub(v.lastUpdateTime).Seconds()
-
-		for {
-			// Use the current Delta until it runs out.
-			delta := &v.curDelta
-			dt := max(min(d, delta.Duration), 0.0)
-			delta.Duration -= dt
-			d -= dt
-
-			// Perform updates from this Delta.
-			v.mean += dt * delta.MeanDeltaRate
-			v.variance += dt * delta.VarDeltaRate
-
-			if d == 0 {
-				break
-			}
-
-			// Pick a new Delta.
-			idx += 1
-			if idx == len(v.config.Changes) {
-				if !v.config.RepeatChanges {
-					break
-				}
-				idx = 0
-			}
-			v.curDelta = v.config.Changes[idx]
-		}
-		v.curChangeIndex = idx
-		v.lastUpdateTime = t
-	}
+	v.maybeUpdateMeanAndVariance()
 
 	value := v.mean
 	switch (v.config.Distribution) {
@@ -174,4 +157,47 @@ func (v *Variable) MeanDuration() time.Duration {
 
 func (v *Variable) VarianceDuration() time.Duration {
 	return time.Duration(v.variance * float64(time.Second))
+}
+
+func (v *Variable) maybeUpdateMeanAndVariance() {
+	if v.lastUpdateTime.IsZero() {
+		v.lastUpdateTime = time.Now()
+	}
+
+	if v.curChangeIndex >= len(v.config.Changes) {
+		return
+	}
+
+	idx := v.curChangeIndex
+	t := time.Now()
+	// How much time has elapsed since the last update?
+	d := t.Sub(v.lastUpdateTime).Seconds()
+
+	for {
+		// Use the current Delta until it runs out.
+		delta := &v.curDelta
+		dt := max(min(d, delta.Duration), 0.0)
+		delta.Duration -= dt
+		d -= dt
+
+		// Perform updates from this Delta.
+		v.mean += dt * delta.MeanDeltaRate
+		v.variance += dt * delta.VarDeltaRate
+
+		if d == 0 {
+			break
+		}
+
+		// Pick a new Delta.
+		idx += 1
+		if idx == len(v.config.Changes) {
+			if !v.config.RepeatChanges {
+				break
+			}
+			idx = 0
+		}
+		v.curDelta = v.config.Changes[idx]
+	}
+	v.curChangeIndex = idx
+	v.lastUpdateTime = t
 }

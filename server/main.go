@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 
+	"github.com/blakej11/cricket/internal/log"
 	"github.com/blakej11/cricket/internal/server"
 
 	"github.com/pelletier/go-toml/v2"
@@ -14,25 +14,25 @@ import (
 var configFile = flag.String("config", "", "path to config file")
 
 func main() {
-	var cfg server.Config
+	var config server.Config
 
 	flag.Parse()
 
 	if *configFile == "" {
-		log.Fatal("must specify configuration via \"-config=/path/to/config.json\"")
+		log.Fatalf("must specify configuration via \"-config=/path/to/config.json\"")
 	}
 	blob, err := os.ReadFile(*configFile)
 	if err != nil {
 		log.Fatalf("could not open config file %q: %w", *configFile, err)
 	}
-	if err := toml.Unmarshal(blob, &cfg); err != nil {
+	if err := toml.Unmarshal(blob, &config); err != nil {
 		log.Fatalf("failed to unmarshal server config: %w", err)
 	}
-	cfgi, err := cfg.New()
+	s, err := server.New(config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%v", err)
 	}
-	cfgi.Run()
+	s.Start()
 
 	ctx := context.Background()
 	<-ctx.Done()
