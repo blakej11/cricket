@@ -44,3 +44,7 @@ func Errorf(format string, v ...any) {
 func Fatalf(format string, v ...any) {
 	log.Fatalf(fmt.Sprintf("[F] %s", format), v...)
 }
+
+func Panicf(format string, v ...any) {
+	log.Panicf(fmt.Sprintf("[F] %s", format), v...)
+}

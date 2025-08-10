@@ -9,10 +9,11 @@ import (
 	"github.com/blakej11/cricket/internal/log"
 	"github.com/blakej11/cricket/internal/random"
 	"github.com/blakej11/cricket/internal/types"
+	"github.com/blakej11/cricket/internal/weightedset"
 )
 
 // A hook that can te changed for testing.
-var rotationAmount = rand.Float64
+var leaseRandomizer = rand.Float64
 
 // ------------------------------------------------------------------
 
@@ -215,8 +216,9 @@ func (b *broker) addClient(id types.ID, location types.PhysLocation) {
 	b.locations[id] = location
 	b.unallocated = append(b.unallocated, id)
 
-	b.increaseFleetSize(1)
+	b.fleetSize += 1
 	b.updateLeasedFraction()
+	b.updateTargetCount()
 	b.assignClients()
 }
 
@@ -235,29 +237,8 @@ func (b *broker) returnClients(ids []types.ID) {
 
 	b.cleanHolders()
 	b.updateLeasedFraction()
+	b.updateTargetCount()
 	b.assignClients()
-}
-
-// Adjust b.fleetSize, and update the targetClientCount of any holders that
-// have been assigned a fraction of the fleet.
-func (b *broker) increaseFleetSize(newClients int) {
-	b.fleetSize += newClients
-
-	frac := 0.0
-	count := 0
-	for _, h := range b.holders {
-		if h.targetFraction == 0 {
-			continue
-		}
-
-		// This shares a consistent rounding behavior with
-		// tryAllocateFleetFraction.
-		newFrac := frac + h.targetFraction
-		newCount := int(newFrac * float64(b.fleetSize))
-		h.setTargetCount(newCount - count)
-		frac = newFrac
-		count = newCount
-	}
 }
 
 // This is a best-effort attempt to clear out any holders that have been
@@ -277,7 +258,7 @@ func (b *broker) cleanHolders() {
 // to a leaseholder, hand it out.
 //
 // This can update b.leasedFraction, but no other fields in "broker".
-// It can also update h.targetFraction and h.targetClientCount.
+// It can also update h.targetFraction.
 func (b *broker) updateLeasedFraction() {
 	const fullyLeasedFraction = 0.9999
 
@@ -286,52 +267,55 @@ func (b *broker) updateLeasedFraction() {
 	}
 
 	// Select the holders that haven't been allocated anything.
-	var toPick []*holder
-	sum := 0.0
+	ws := weightedset.New[*holder](leaseRandomizer)
 	for _, h := range b.holders {
-		if h.isDormant() && h.Lease.weight > 0 {
-			toPick = append(toPick, h)
-			sum += h.Lease.weight
+		if h.isDormant() {
+			ws.Add(h, h.Lease.weight)
 		}
 	}
-	if sum == 0.0 {
-		return
-	}
 
-	// Reorder the above slice, so a specific element picked out by the
-	// weighted random selection will get first dibs at any allocation.
-	var toActivate []*holder
-	pick := rotationAmount() * sum
-	sum = 0.0
-	for idx, h := range toPick {
-		sum += h.Lease.weight
-		if sum < pick {
-			continue
-		}
-		toActivate = append(toPick[idx:], toPick[:idx]...)
-		break
-	}
-
-	for _, h := range toActivate {
+	for _, h := range ws.Slice() {
 		l := h.Lease
-		frac := h.Lease.fleetFraction.Float64()
+		frac := l.fleetFraction.Float64()
 		if l.maxFleetFraction > 0.0 {
 			frac = min(frac, l.maxFleetFraction)
 		}
-		oldFrac := b.leasedFraction
-		newFrac := oldFrac + frac
-		oldTargetCount := int(oldFrac * float64(b.fleetSize))
-		newTargetCount := int(newFrac * float64(b.fleetSize))
-		count := newTargetCount - oldTargetCount
-		if l.maxClients > 0 {
-			count = min(count, l.maxClients)
-		}
-		// "count" may start off at 0, e.g. when the fleet is small.
-		h.init(frac, count)
-		b.leasedFraction = newFrac
+		h.init(frac)
+		b.leasedFraction += frac
 		if b.leasedFraction >= fullyLeasedFraction {
 			break
 		}
+	}
+}
+
+// Update the targetClientCount of any holders that have been assigned
+// a fraction of the fleet.
+//
+// This is the only place where targetClientCount gets changed (from 0),
+// and it's always done in a consistent order (that of b.holders). This
+// ensures that the rounding behavior of the "newCount" calculation is
+// consistent.
+func (b *broker) updateTargetCount() {
+	oldFrac := 0.0
+	oldCount := 0
+	for _, h := range b.holders {
+		if h.targetFraction == 0 {
+			continue
+		}
+
+		// This shares a consistent rounding behavior with
+		// tryAllocateFleetFraction.
+		newFrac := oldFrac + h.targetFraction
+		newCount := int(newFrac * float64(b.fleetSize))
+
+		assigned := newCount - oldCount
+		if h.Lease.maxClients > 0 {
+			assigned = min(assigned, h.Lease.maxClients)
+		}
+		h.setTargetCount(assigned)
+
+		oldFrac = newFrac
+		oldCount = newCount
 	}
 }
 
@@ -348,34 +332,18 @@ func (b *broker) assignClients() {
 	}
 
 	// Select any non-dormant holders that still want some clients.
-	var toPick []*holder
-	sum := 0
+	ws := weightedset.New[*holder](leaseRandomizer)
 	for _, h := range b.holders {
-		if cw := h.clientsWanted(); cw > 0 {
-			toPick = append(toPick, h)
-			sum += cw
+		if h.clientsWanted() > 0 {
+			ws.Add(h, h.Lease.weight)
 		}
 	}
-	if sum == 0 {
+	if ws.Len() == 0 {
 		log.Infof("assignClients: no clients wanted\n")
 		return
 	}
 
-	// Rotate the above slice, so a specific element picked out by the
-	// weighted random selection will get first dibs at any allocation.
-	var toActivate []*holder
-	pick := int(rotationAmount() * float64(sum))
-	sum = 0
-	for idx, h := range toPick {
-		sum += h.clientsWanted()
-		if sum < pick {
-			continue
-		}
-		toActivate = append(toPick[idx:], toPick[:idx]...)
-		break
-	}
-
-	for _, h := range toActivate {
+	for _, h := range ws.Slice() {
 		count := min(h.clientsWanted(), available)
 		clients := b.unallocated[:count]
 
@@ -422,10 +390,10 @@ func newHolder(h Holder, l Lease) *holder {
 	}
 }
 
-func (h *holder) init(frac float64, count int) {
+func (h *holder) init(frac float64) {
 	h.is = types.NewIDSetProducer()
+	h.targetClientCount = 0
 	h.setTargetFraction(frac)
-	h.setTargetCount(count)
 	h.initTime = time.Now()
 	h.started = false
 }
@@ -436,6 +404,10 @@ func (h *holder) setTargetFraction(newFrac float64) {
 }
 
 func (h *holder) setTargetCount(newCount int) {
+	if newCount < h.targetClientCount {
+		log.Panicf("%s (%v): decreasing target client count: %d -> %d\n",
+		    h.Lease.name, h.Lease.Type, h.targetClientCount, newCount)
+	}
 	h.targetClientCount = newCount
 	log.Infof("%s (%v) targeting %d clients\n", h.Lease.name, h.Lease.Type, newCount)
 }
@@ -489,4 +461,3 @@ func (h *holder) reset() {
 	h.initTime = time.Now()
 	h.started = false
 }
-

@@ -2,6 +2,7 @@ package lease
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -127,7 +128,7 @@ func TestLeaseConfigErrors(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			l, _ := New(test.c)
+			l, _ := New(test.c, test.name)
 			if l != nil {
 				t.Errorf("LeaseConfig: want nil, got %v\n", l)
 			}
@@ -137,12 +138,12 @@ func TestLeaseConfigErrors(t *testing.T) {
 
 // ---------------------------------------------------------------------
 
-func newLease(t *testing.T, weight, fleetFraction float64) *Lease {
+func newLease(t *testing.T, name string, weight, fleetFraction float64) *Lease {
 	l, err := New(Config{
 		Type:          types.Sound,
 		Weight:        weight,
 		FleetFraction: random.FixedConfig(fleetFraction),
-	})
+	}, name)
 	if err != nil {
 		t.Fatalf("Lease generation failed: %v\n", err)
 	}
@@ -157,16 +158,16 @@ func pushHolders(b *broker) ([]*holder, func()) {
 }
 
 // Disable the randomness that's used to "fairly" allocate clients.
-func fixAllocationRandomness(fixed float64) func() {
-	oldAmount := rotationAmount
-	rotationAmount = func() float64 { return fixed }
-	return func() { rotationAmount = oldAmount }
+func fixAllocationRandomness() func() {
+	oldRandomizer := leaseRandomizer
+	leaseRandomizer = func() float64 { return 0.0 }
+	return func() { leaseRandomizer = oldRandomizer }
 }
 
 func TestAddClient(t *testing.T) {
 	fe := newFakeEffect()
 	b := newBroker()
-	b.assign(newLease(t, 1.0, 1.0), fe)
+	b.assign(newLease(t, "addClient lease", 1.0, 1.0), fe)
 
 	wantClients := []types.ID {
 		types.ID("c00"),
@@ -175,7 +176,7 @@ func TestAddClient(t *testing.T) {
 		types.ID("c03"),
 		types.ID("c04"),
 	}
-	resume := fixAllocationRandomness(0)
+	resume := fixAllocationRandomness()
 	for i := range wantClients {
 		b.addClient(wantClients[i], types.PhysLocation{})
 	}
@@ -231,6 +232,7 @@ func TestAddClient(t *testing.T) {
 func TestAddClients(t *testing.T) {
 	type effect struct {
 		fe	*fakeEffect
+		name	string
 		weight	float64
 		fleet	float64
 		runs	int
@@ -239,15 +241,14 @@ func TestAddClients(t *testing.T) {
 
 	for _, test := range []struct {
 		name	string
-		effects	[]effect
+		effects	[]*effect
 		clients	[]types.ID
-		fixed	float64
 	}{
 		{
 			name: "two leases",
-			effects: []effect {
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 0.6, runs: 1, clients: 3 },
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 0.4, runs: 1, clients: 2 },
+			effects: []*effect {
+				{ name: "l0", weight: 1.0, fleet: 0.6, runs: 1, clients: 3 },
+				{ name: "l1", weight: 1.0, fleet: 0.4, runs: 1, clients: 2 },
 			},
 			clients: []types.ID{
 				types.ID("c00"),
@@ -259,9 +260,9 @@ func TestAddClients(t *testing.T) {
 		},
 		{
 			name: "imbalanced leases",
-			effects: []effect {
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 0.1, runs: 0, clients: 0 },
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 0.9, runs: 1, clients: 5 },
+			effects: []*effect {
+				{ name: "l0", weight: 0.1, fleet: 0.1, runs: 0, clients: 0 },
+				{ name: "l1", weight: 0.9, fleet: 0.9, runs: 1, clients: 5 },
 			},
 			clients: []types.ID{
 				types.ID("c00"),
@@ -274,11 +275,11 @@ func TestAddClients(t *testing.T) {
 		{
 			// The weights will cause the last effect to come first and get everything.
 			name: "weighted",
-			effects: []effect {
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 1.0, runs: 0, clients: 0 },
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 1.0, runs: 0, clients: 0 },
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 1.0, runs: 0, clients: 0 },
-				{ fe: newFakeEffect(), weight: 9.0, fleet: 1.0, runs: 1, clients: 5 },
+			effects: []*effect {
+				{ name: "l0", weight: 1.0, fleet: 1.0, runs: 0, clients: 0 },
+				{ name: "l1", weight: 1.0, fleet: 1.0, runs: 0, clients: 0 },
+				{ name: "l2", weight: 1.0, fleet: 1.0, runs: 0, clients: 0 },
+				{ name: "l3", weight: 9.0, fleet: 1.0, runs: 1, clients: 5 },
 			},
 			clients: []types.ID{
 				types.ID("c00"),
@@ -287,15 +288,14 @@ func TestAddClients(t *testing.T) {
 				types.ID("c03"),
 				types.ID("c04"),
 			},
-			fixed: 0.5,
 		},
 		{
 			name: "beyond full fleet",
-			effects: []effect {
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 0.3, runs: 1, clients: 3 },
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 0.3, runs: 1, clients: 3 },
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 1.0, runs: 1, clients: 4 },
-				{ fe: newFakeEffect(), weight: 1.0, fleet: 0.5, runs: 0, clients: 0 },
+			effects: []*effect {
+				{ name: "l0", weight: 1.0, fleet: 0.3, runs: 1, clients: 3 },
+				{ name: "l1", weight: 1.0, fleet: 0.3, runs: 1, clients: 3 },
+				{ name: "l2", weight: 1.0, fleet: 1.0, runs: 1, clients: 4 },
+				{ name: "l3", weight: 1.0, fleet: 0.5, runs: 0, clients: 0 },
 			},
 			clients: []types.ID{
 				types.ID("c00"),
@@ -314,9 +314,11 @@ func TestAddClients(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			b := newBroker()
 			for _, e := range test.effects {
-				b.assign(newLease(t, e.weight, e.fleet), e.fe)
+				e.fe = newFakeEffect()
+				n := fmt.Sprintf("%q %s", test.name, e.name)
+				b.assign(newLease(t, n, e.weight, e.fleet), e.fe)
 			}
-			resume := fixAllocationRandomness(test.fixed)
+			resume := fixAllocationRandomness()
 			for _, c := range test.clients {
 				b.addClient(c, types.PhysLocation{})
 			}
@@ -344,13 +346,13 @@ func TestReturnClients(t *testing.T) {
 	fe := newFakeEffect()
 
 	b := newBroker()
-	b.assign(newLease(t, 1.0, 1.0), fe)
+	b.assign(newLease(t, "ReturnClients lease", 1.0, 1.0), fe)
 
 	clients := []types.ID {
 		types.ID("c00"),
 		types.ID("c01"),
 	}
-	resume := fixAllocationRandomness(0)
+	resume := fixAllocationRandomness()
 	for i := range clients {
 		b.addClient(clients[i], types.PhysLocation{})
 	}
@@ -366,7 +368,7 @@ func TestReturnClients(t *testing.T) {
 
 	// Since there is just one leaseholder, it will get the new clients
 	// that the old copy of it returned.
-	resume = fixAllocationRandomness(0)
+	resume = fixAllocationRandomness()
 	b.returnClients(gotClients)
 	resume()
 
@@ -387,8 +389,8 @@ func TestReturnClientsToAnother(t *testing.T) {
 	fe1 := newFakeEffect()
 
 	b := newBroker()
-	b.assign(newLease(t, 1.0, 0.4), fe0)
-	b.assign(newLease(t, 1.0, 1.0), fe1)
+	b.assign(newLease(t, "fe0", 1.0, 0.4), fe0)
+	b.assign(newLease(t, "fe1", 1.0, 1.0), fe1)
 
 	clients := []types.ID {
 		types.ID("c00"),
@@ -397,7 +399,7 @@ func TestReturnClientsToAnother(t *testing.T) {
 		types.ID("c03"),
 		types.ID("c04"),
 	}
-	resume := fixAllocationRandomness(0)
+	resume := fixAllocationRandomness()
 	for i := range clients {
 		b.addClient(clients[i], types.PhysLocation{})
 	}
@@ -418,7 +420,7 @@ func TestReturnClientsToAnother(t *testing.T) {
 
 	// Since effect 1 still has a claim on the whole fleet, all of the
 	// clients should flow to it when they're returned from effect 0.
-	resume = fixAllocationRandomness(0)
+	resume = fixAllocationRandomness()
 	b.returnClients(gotClients)
 	resume()
 
@@ -448,8 +450,8 @@ func TestReturnClientsWhileFleetGrows(t *testing.T) {
 	fe1 := newFakeEffect()
 
 	b := newBroker()
-	b.assign(newLease(t, 1.0, 0.4), fe0)
-	b.assign(newLease(t, 1.0, 1.0), fe1)
+	b.assign(newLease(t, "fe0", 1.0, 0.4), fe0)
+	b.assign(newLease(t, "fe1", 1.0, 1.0), fe1)
 
 	clients := []types.ID {
 		types.ID("c00"),
@@ -458,7 +460,7 @@ func TestReturnClientsWhileFleetGrows(t *testing.T) {
 		types.ID("c03"),
 		types.ID("c04"),
 	}
-	resume := fixAllocationRandomness(0)
+	resume := fixAllocationRandomness()
 	for i := range clients {
 		b.addClient(clients[i], types.PhysLocation{})
 	}
@@ -486,7 +488,7 @@ func TestReturnClientsWhileFleetGrows(t *testing.T) {
 		types.ID("c08"),
 		types.ID("c09"),
 	}
-	resume = fixAllocationRandomness(0)
+	resume = fixAllocationRandomness()
 	for i := range clients {
 		b.addClient(newClients[i], types.PhysLocation{})
 	}
@@ -494,7 +496,7 @@ func TestReturnClientsWhileFleetGrows(t *testing.T) {
 
 	// Since fe1 still has a claim on the whole fleet, all of the
 	// clients should flow to it when they're returned from effect 0.
-	resume = fixAllocationRandomness(0)
+	resume = fixAllocationRandomness()
 	b.returnClients(gotClients)
 	resume()
 
@@ -547,7 +549,8 @@ func TestHolder(t *testing.T) {
 
 	const fleetFrac = 0.3
 	const targetClients = 5
-	h.init(fleetFrac, targetClients)
+	h.init(fleetFrac)
+	h.setTargetCount(targetClients)
 
 	if h.isDormant() {
 		t.Errorf("initialized holder is dormant, shouldn't be\n")
