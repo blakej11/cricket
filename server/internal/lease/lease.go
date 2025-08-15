@@ -2,6 +2,7 @@ package lease
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"strings"
 	"time"
@@ -73,6 +74,14 @@ func validate(l *Lease) (*Lease, error) {
 	}
 
 	return l, nil
+}
+
+func (l *Lease) infof(format string, v ...any) {
+	log.Infof("lease: %s (%v): %s", l.name, l.Type, fmt.Sprintf(format, v...))
+}
+
+func (l *Lease) panicf(format string, v ...any) {
+	log.Panicf("lease: %s (%v): %s", l.name, l.Type, fmt.Sprintf(format, v...))
 }
 
 // These interfaces are for testing.
@@ -241,6 +250,22 @@ func (b *broker) returnClients(ids []types.ID) {
 	b.assignClients()
 }
 
+// interfaces for testing
+func (b *broker) disable(holder Holder) {
+	for _, h := range b.holders {
+		if h.Holder == holder {
+			h.disable()
+		}
+	}
+}
+func (b *broker) enable(holder Holder) {
+	for _, h := range b.holders {
+		if h.Holder == holder {
+			h.enable()
+		}
+	}
+}
+
 // This is a best-effort attempt to clear out any holders that have been
 // marked closed or that are too small to get any clients. It might race
 // with an update of a Close() of that holder (since this code isn't holding
@@ -273,7 +298,6 @@ func (b *broker) updateLeasedFraction() {
 			ws.Add(h, h.Lease.weight)
 		}
 	}
-
 	for _, h := range ws.Slice() {
 		l := h.Lease
 		frac := l.fleetFraction.Float64()
@@ -288,34 +312,16 @@ func (b *broker) updateLeasedFraction() {
 	}
 }
 
-// Update the targetClientCount of any holders that have been assigned
-// a fraction of the fleet.
-//
-// This is the only place where targetClientCount gets changed (from 0),
-// and it's always done in a consistent order (that of b.holders). This
-// ensures that the rounding behavior of the "newCount" calculation is
-// consistent.
+// Update each holder's target client count.
 func (b *broker) updateTargetCount() {
-	oldFrac := 0.0
-	oldCount := 0
+	fleetSize := float64(b.fleetSize)
 	for _, h := range b.holders {
-		if h.targetFraction == 0 {
-			continue
+		l := h.Lease
+		target := int(math.Round(h.targetFraction * fleetSize))
+		if l.maxClients > 0 {
+			target = min(target, l.maxClients)
 		}
-
-		// This shares a consistent rounding behavior with
-		// tryAllocateFleetFraction.
-		newFrac := oldFrac + h.targetFraction
-		newCount := int(newFrac * float64(b.fleetSize))
-
-		assigned := newCount - oldCount
-		if h.Lease.maxClients > 0 {
-			assigned = min(assigned, h.Lease.maxClients)
-		}
-		h.setTargetCount(assigned)
-
-		oldFrac = newFrac
-		oldCount = newCount
+		h.setTargetCount(target)
 	}
 }
 
@@ -339,7 +345,7 @@ func (b *broker) assignClients() {
 		}
 	}
 	if ws.Len() == 0 {
-		log.Infof("assignClients: no clients wanted\n")
+		log.Infof("lease: assignClients: no clients wanted\n")
 		return
 	}
 
@@ -377,6 +383,7 @@ type holder struct {
 	targetClientCount int
 	initTime          time.Time
 	started	          bool
+	disabled          bool
 }
 
 // If a holder has been around for this long and hasn't received any
@@ -399,22 +406,39 @@ func (h *holder) init(frac float64) {
 }
 
 func (h *holder) setTargetFraction(newFrac float64) {
+	oldFrac := h.targetFraction
+	if oldFrac == newFrac {
+		return
+	}
 	h.targetFraction = newFrac
-	log.Infof("%s (%v) targeting %.6f of fleet\n", h.Lease.name, h.Lease.Type, newFrac)
+	h.Lease.infof("targeting %.3f of fleet (was %.3f)\n", newFrac, oldFrac)
 }
 
 func (h *holder) setTargetCount(newCount int) {
-	if newCount < h.targetClientCount {
-		log.Panicf("%s (%v): decreasing target client count: %d -> %d\n",
-		    h.Lease.name, h.Lease.Type, h.targetClientCount, newCount)
+	oldCount := h.targetClientCount
+	if newCount == oldCount {
+		return
+	}
+	if newCount < oldCount {
+		h.Lease.panicf("decreasing target client count: %d -> %d\n", oldCount, newCount)
 	}
 	h.targetClientCount = newCount
-	log.Infof("%s (%v) targeting %d clients\n", h.Lease.name, h.Lease.Type, newCount)
+	h.Lease.infof("targeting %d clients (was %d)\n", newCount, oldCount)
+}
+
+// interfaces for testing
+func (h *holder) disable() {
+	h.Lease.infof("disabling")
+	h.disabled = true
+}
+func (h *holder) enable() {
+	h.Lease.infof("enabling")
+	h.disabled = false
 }
 
 // This holder has not received any clients, so it's not even trying to start.
 func (h *holder) isDormant() bool {
-	return h.targetClientCount == 0
+	return h.targetClientCount == 0 && !h.disabled
 }
 
 func (h *holder) isStale() bool {
@@ -451,10 +475,12 @@ func (h *holder) logAssignment(clients []types.ID) {
 	for i := range clients {
 		strs[i] = string(clients[i])
 	}
-	log.Infof("assigning clients [ %s ] to %s (%v)\n", strings.Join(strs, ", "), h.Lease.name, h.Lease.Type)
+	h.Lease.infof("assigning clients [ %s ]\n", strings.Join(strs, ", "))
 }
 
 func (h *holder) reset() {
+	h.Lease.infof("resetting; was targeting %.3f of fleet, %d clients\n", h.targetFraction, h.targetClientCount)
+
 	h.is = nil
 	h.targetFraction = 0
 	h.targetClientCount = 0

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash/maphash"
 	"reflect"
-	"strings"
 	"time"
 
         "github.com/blakej11/cricket/internal/client"
@@ -192,32 +191,18 @@ func (e *Effect) Run(is types.IDSetConsumer) {
 }
 
 func (e *Effect) run(is types.IDSetConsumer) {
-	desc := fmt.Sprintf("params %s", describeArg(e.parameters))
-	if e.fileSets != nil {
-		desc += fmt.Sprintf(", filesets %s", describeArg(e.fileSets))
-	}
-
 	resetParams(e.parameters)
         dur := e.duration.Duration()
         ctx, cancel := context.WithTimeout(context.Background(), dur)
-	log.Infof("Start  effect %q: %s, duration %v", e.name, desc, dur)
+	log.Infof("Start  effect %q: target duration %v", e.name, dur)
 	e.alg.Run(ctx, is, e.parameters, e.fileSets)
-	log.Infof("Finish effect %q: %s", e.name, desc)
+	log.Infof("Finish effect %q", e.name)
 	cancel()
 
 	is.Close()
 	if !e.skipDrain {
 		e.drainQueue(is.Snapshot())
 	}
-}
-
-func describeArg(arg any) string {
-	var names []string
-	t := reflect.TypeOf(arg).Elem()
-	for i := 0; i < t.NumField(); i++ {
-		names = append(names, strings.ToLower(string(t.Field(i).Name)))
-	}
-	return fmt.Sprintf("[ %s ]", strings.Join(names, ","))
 }
 
 func resetParams(params any) {
@@ -273,7 +258,7 @@ func (e *Effect) drainQueue(clients []types.ID) {
 			}
 			stillDraining = append(stillDraining, id)
 		}
-		log.Infof("[drain %016x] %d clients still draining after %.1f seconds: %v",
-		    clientHash, toDrain, now.Sub(start).Seconds(), stillDraining)
+		log.Infof("[drain %016x, %s] %d clients still draining after %.1f seconds: %v",
+		    clientHash, e.leaseType, toDrain, now.Sub(start).Seconds(), stillDraining)
 	}
 }

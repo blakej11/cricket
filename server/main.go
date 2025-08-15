@@ -34,6 +34,7 @@ func main() {
 	}
 	s.Start()
 
+	log.Infof("Cricket server ready.")
 	ctx := context.Background()
 	<-ctx.Done()
 }

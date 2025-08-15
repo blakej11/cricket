@@ -259,6 +259,30 @@ func TestAddClients(t *testing.T) {
 			},
 		},
 		{
+			name: "rounding up",
+			effects: []*effect {
+				// Because the lease code uses math.Round() to decide the
+				// target client count, these will wind up wanting
+				// 2, 2, 2, and 1 clients respectively, despite having a
+				// fleet size of 5. This doesn't cause any trouble though,
+				// since they can start as soon as they get at least 1;
+				// moreover, outside of the test, the clients are allocated
+				// randomly, so it won't be the case that the last one
+				// in the array always gets short shrift.
+				{ name: "l0", weight: 1.0, fleet: 0.3, runs: 1, clients: 2 },
+				{ name: "l1", weight: 1.0, fleet: 0.3, runs: 1, clients: 2 },
+				{ name: "l2", weight: 1.0, fleet: 0.3, runs: 1, clients: 1 },
+				{ name: "l3", weight: 1.0, fleet: 0.1, runs: 0, clients: 0 },
+			},
+			clients: []types.ID{
+				types.ID("c00"),
+				types.ID("c01"),
+				types.ID("c02"),
+				types.ID("c03"),
+				types.ID("c04"),
+			},
+		},
+		{
 			name: "imbalanced leases",
 			effects: []*effect {
 				{ name: "l0", weight: 0.1, fleet: 0.1, runs: 0, clients: 0 },
@@ -389,8 +413,8 @@ func TestReturnClientsToAnother(t *testing.T) {
 	fe1 := newFakeEffect()
 
 	b := newBroker()
-	b.assign(newLease(t, "fe0", 1.0, 0.4), fe0)
-	b.assign(newLease(t, "fe1", 1.0, 1.0), fe1)
+	b.assign(newLease(t, "ToAnother fe0", 1.0, 0.4), fe0)
+	b.assign(newLease(t, "ToAnother fe1", 1.0, 1.0), fe1)
 
 	clients := []types.ID {
 		types.ID("c00"),
@@ -443,6 +467,42 @@ func TestReturnClientsToAnother(t *testing.T) {
 	if !reflect.DeepEqual(clients, gotClients) {
 		t.Errorf("want client list %q, got %q\n", clients, gotClients)
 	}
+}
+
+func TestReturnClientsOneDisabled(t *testing.T) {
+	fe0 := newFakeEffect()
+	fe1 := newFakeEffect()
+
+	b := newBroker()
+	b.assign(newLease(t, "OneDisabled fe0", 1.0, 0.30), fe0)
+	b.assign(newLease(t, "OneDisabled fe1", 1.0, 0.70), fe1)
+
+	clients := []types.ID {
+		types.ID("c00"),
+		types.ID("c01"),
+		types.ID("c02"),
+		types.ID("c03"),
+		types.ID("c04"),
+	}
+	resume := fixAllocationRandomness()
+	for i := range clients {
+		b.addClient(clients[i], types.PhysLocation{})
+	}
+	resume()
+
+	gotClients := fe0.getClients()
+	want := 2
+	if len(gotClients) != want {
+		t.Errorf("effect %d wanted %d clients, got %d (%v)\n", 0, want, len(gotClients), gotClients)
+	}
+
+	// Effect 0 is now stopped. Disable it before returning its clients,
+	// so it doesn't try to reclaim its fleet fraction.
+	b.disable(fe0)
+	resume = fixAllocationRandomness()
+	b.returnClients(gotClients)
+	resume()
+	b.enable(fe0)
 }
 
 func TestReturnClientsWhileFleetGrows(t *testing.T) {

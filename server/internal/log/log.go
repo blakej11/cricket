@@ -3,8 +3,9 @@ package log
 import "fmt"
 import "log"
 
+type Level int
 const (
-	Fatal = iota
+	Fatal Level = iota
 	Error
 	Warning
 	Info
@@ -12,6 +13,21 @@ const (
 )
 
 var DebugLevel = Debug
+
+func Logf(l Level, format string, v ...any) {
+	switch l {
+	case Fatal:
+		Fatalf(format, v...)
+	case Error:
+		Errorf(format, v...)
+	case Warning:
+		Warningf(format, v...)
+	case Info:
+		Infof(format, v...)
+	case Debug:
+		Debugf(format, v...)
+	}
+}
 
 func Debugf(format string, v ...any) {
 	if (DebugLevel < Debug) {
