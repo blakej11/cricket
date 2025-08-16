@@ -479,7 +479,9 @@ func (h *holder) logAssignment(clients []types.ID) {
 }
 
 func (h *holder) reset() {
-	h.Lease.infof("resetting; was targeting %.3f of fleet, %d clients\n", h.targetFraction, h.targetClientCount)
+	if h.targetFraction > 0 {
+		h.Lease.infof("resetting; was targeting %.3f of fleet, %d clients\n", h.targetFraction, h.targetClientCount)
+	}
 
 	h.is = nil
 	h.targetFraction = 0

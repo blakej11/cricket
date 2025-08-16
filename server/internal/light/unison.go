@@ -24,10 +24,10 @@ type unisonParams struct {
 }
 
 func init() {
-	effect.RegisterLight("unison", &unison{}, &unisonParams{})
+	effect.RegisterLight[unison, unisonParams]("unison")
 }
 
-func (u *unison) Run(ctx context.Context, ids types.IDSetConsumer, params any, _ any) {
+func (u unison) Run(ctx context.Context, ids types.IDSetConsumer, params any, _ any) {
 	p := params.(*unisonParams)
 
 	groupReps := p.GroupReps.Int()

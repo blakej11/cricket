@@ -26,10 +26,10 @@ type nonrandomFileSets struct {
 }
 
 func init() {
-	effect.RegisterSound("nonrandom", &nonrandom{}, &nonrandomParams{}, &nonrandomFileSets{})
+	effect.RegisterSound[nonrandom, nonrandomParams, nonrandomFileSets]("nonrandom")
 }
 
-func (n *nonrandom) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
+func (n nonrandom) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
 	p := params.(*nonrandomParams)
 	fs := fileSets.(*nonrandomFileSets)
 

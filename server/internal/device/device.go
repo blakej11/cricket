@@ -154,7 +154,17 @@ func (d Device) SoundEndsTime() time.Time {
 	return d.GetTimestamp(endOfSound)
 }
 
-func (d Device) String() string {
+func (d Device) Name() string {
+	if d.name != "" {
+		return d.name
+	}
+	if d.id != "" {
+		return fmt.Sprintf("[%s]", d.id)
+	}
+	return d.FullName()
+}
+
+func (d Device) FullName() string {
 	return fmt.Sprintf("[%s (%q, %s, %v)]", d.id, d.name, d.netLocation.String(), d.physLocation)
 }
 
@@ -295,7 +305,7 @@ func (d *Device) SetNetLocation(newLoc types.NetLocation) {
 	defer d.locMu.Unlock()
 
 	if !d.netLocation.Equal(newLoc) {
-		log.Infof("%v updating IP to %s", *d, newLoc.String())
+		log.Infof("%s: updating IP to %s", d.Name(), newLoc.String())
 		d.netLocation = newLoc
 	}
 }

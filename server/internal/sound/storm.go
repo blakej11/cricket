@@ -40,10 +40,10 @@ type stormFileSets struct {
 }
 
 func init() {
-	effect.RegisterSound("storm", &storm{}, &stormParams{}, &stormFileSets{})
+	effect.RegisterSound[storm, stormParams, stormFileSets]("storm")
 }
 
-func (s *storm) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
+func (s storm) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
 	p := params.(*stormParams)
 	fs := fileSets.(*stormFileSets)
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"regexp"
+	"strings"
 )
 
 // Config describes a set of files that are operated on together.
@@ -21,8 +22,13 @@ type File struct {
 	Duration	float64
 }
 
+func (f File) String() string {
+	return fmt.Sprintf("%d/%02d", f.Folder, f.File)
+}
+
 // Set is the runtime instantiation of a file set.
 type Set struct {
+	name	string
 	files	[]File
 }
 
@@ -38,7 +44,7 @@ func New(name string, c Config, files map[string]File) (*Set, error) {
 			results = append(results, file)
 		}
 	}
-	return &Set{files: results}, nil
+	return &Set{name: name, files: results}, nil
 }
 
 func (f *Set) Pick() File {
@@ -47,4 +53,12 @@ func (f *Set) Pick() File {
 
 func (f *Set) Set() []File {
 	return f.files
+}
+
+func (f *Set) String() string {
+	results := []string{}
+	for _, file := range f.files {
+		results = append(results, file.String())
+	}
+	return fmt.Sprintf("%q (%s)", f.name, strings.Join(results, ", "))
 }

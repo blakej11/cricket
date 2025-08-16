@@ -29,12 +29,14 @@ type loopFileSets struct {
 }
 
 func init() {
-	effect.RegisterSound("loop", &loop{}, &loopParams{}, &loopFileSets{})
+	effect.RegisterSound[loop, loopParams, loopFileSets]("loop")
 }
 
-func (l *loop) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
+func (l loop) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
 	p := params.(*loopParams)
 	fs := fileSets.(*loopFileSets)
+
+	log.Infof("loop playing fileset %q", fs.Main.String())
 
 	for ctx.Err() == nil {
 		file := fs.Main.Pick()

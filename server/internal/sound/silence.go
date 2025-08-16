@@ -9,12 +9,14 @@ import (
 
 // silence plays no sound.
 type silence struct {}
+type silenceParams struct {}
+type silenceFileSets struct {}
 
 func init() {
-	effect.RegisterSound("silence", &silence{}, nil, nil)
+	effect.RegisterSound[silence, silenceParams, silenceFileSets]("silence")
 }
 
-func (s *silence) Run(ctx context.Context, _ types.IDSetConsumer, _ any, _ any) {
+func (s silence) Run(ctx context.Context, _ types.IDSetConsumer, _ any, _ any) {
 	select {
 	case <-ctx.Done():
 		return

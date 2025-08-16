@@ -81,14 +81,15 @@ func newEffect(name string, c Config, fileSetMap map[string]*fileset.Set) (*Effe
 		return nil, err
 	}
 
-	return &Effect{
+	e := &Effect{
 		name:		name,
 		leaseType:	c.Lease.Type,
 		alg:		alg,
 		parameters:	params,
 		fileSets:	fileSets,
 		duration:	random.New(c.Duration),
-	}, nil
+	}
+	return e, nil
 }
 
 func fillStructure(name string, structure any, typeName string, getValue func(string) (any, error)) error {
@@ -133,27 +134,34 @@ type Algorithm interface {
 	Run(context.Context, types.IDSetConsumer, any, any)
 }
 
-func RegisterSound(name string, alg Algorithm, params any, fileSets any) {
-	registerAlgorithm(types.Sound, name, alg, params, fileSets)
+type algorithmCtor func() (Algorithm, /*params*/ any, /*fileSets*/ any)
+
+func RegisterSound[T Algorithm, P any, F any](name string) {
+	registerAlgorithm(types.Sound, name, func() (Algorithm, any, any) {
+		var t T
+		var p P
+		var f F
+		return t, &p, &f
+	})
 }
 
-func RegisterLight(name string, alg Algorithm, params any) {
-	registerAlgorithm(types.Light, name, alg, params, nil)
+func RegisterLight[T Algorithm, P any](name string) {
+	registerAlgorithm(types.Light, name, func() (Algorithm, any, any) {
+		var t T
+		var p P
+		return t, &p, nil
+	})
 }
 
 // this can be called from module init functions
-func registerAlgorithm(ty types.LeaseType, name string, alg Algorithm, params any, fileSets any) {
+func registerAlgorithm(ty types.LeaseType, name string, ctor algorithmCtor) {
 	if algs == nil {
-		algs = make(map[types.LeaseType]map[string]algorithmImpl)
+		algs = make(map[types.LeaseType]map[string]algorithmCtor)
 		for _, t := range types.ValidLeaseTypes() {
-			algs[t] = make(map[string]algorithmImpl)
+			algs[t] = make(map[string]algorithmCtor)
 		}
 	}
-	algs[ty][name] = algorithmImpl{
-		alg:		alg,
-		params:		params,
-		fileSets:	fileSets,
-	}
+	algs[ty][name] = ctor
 }
 
 func lookupAlgorithm(ty types.LeaseType, name string) (Algorithm, any, any, error) {
@@ -163,8 +171,8 @@ func lookupAlgorithm(ty types.LeaseType, name string) (Algorithm, any, any, erro
 	if _, ok := algs[ty][name]; !ok {
 		return nil, nil, nil, fmt.Errorf("failed to find %v-type algorithm %q", ty, name)
 	}
-	a := algs[ty][name]
-	return a.alg, a.params, a.fileSets, nil
+	alg, params, fileSets := algs[ty][name]()
+	return alg, params, fileSets, nil
 }
 
 // For testing.
@@ -172,13 +180,7 @@ func resetAlgs() {
 	algs = nil
 }
 
-type algorithmImpl struct {
-	alg		Algorithm
-	params		any
-	fileSets	any
-}
-
-var algs map[types.LeaseType]map[string]algorithmImpl
+var algs map[types.LeaseType]map[string]algorithmCtor
 
 // ---------------------------------------------------------------------
 

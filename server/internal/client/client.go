@@ -133,7 +133,7 @@ func (r addClientMessage) handle() {
 	}
 
 	d := device.New(r.id, name, r.location, physLocation, data.defaultVolume)
-	log.Infof("adding new client: %v", *d)
+	log.Infof("adding new client: %s", d.FullName())
 
 	data.devices[r.id] = d
 	d.Start()

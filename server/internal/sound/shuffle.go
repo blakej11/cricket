@@ -12,10 +12,10 @@ import (
 type shuffle struct {}
 
 func init() {
-	effect.RegisterSound("shuffle", &shuffle{}, &loopParams{}, &loopFileSets{})
+	effect.RegisterSound[shuffle, loopParams, loopFileSets]("shuffle")
 }
 
-func (s *shuffle) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
+func (s shuffle) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
 	ids.Launch(ctx, func(id types.ID) {
 		l := &loop{}
 		l.Run(ctx, types.NewFixedIDSet(id), params, fileSets)

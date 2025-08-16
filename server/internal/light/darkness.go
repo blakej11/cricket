@@ -9,12 +9,13 @@ import (
 
 // darkness makes no light.
 type darkness struct{}
+type darknessParams struct{}
 
 func init() {
-	effect.RegisterLight("darkness", &darkness{}, nil)
+	effect.RegisterLight[darkness, darknessParams]("darkness")
 }
 
-func (d *darkness) Run(ctx context.Context, ids types.IDSetConsumer, params any, _ any) {
+func (d darkness) Run(ctx context.Context, _ types.IDSetConsumer, _ any, _ any) {
 	select {
 	case <-ctx.Done():
 		return

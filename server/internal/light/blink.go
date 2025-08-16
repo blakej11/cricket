@@ -21,10 +21,10 @@ type blinkParams struct {
 }
 
 func init() {
-	effect.RegisterLight("blink", &blink{}, &blinkParams{})
+	effect.RegisterLight[blink, blinkParams]("blink")
 }
 
-func (b *blink) Run(ctx context.Context, ids types.IDSetConsumer, params any, _ any) {
+func (b blink) Run(ctx context.Context, ids types.IDSetConsumer, params any, _ any) {
 	p := params.(*blinkParams)
 
 	ids.Launch(ctx, func(id types.ID) {
