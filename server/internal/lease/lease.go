@@ -272,7 +272,8 @@ func (b *broker) enable(holder Holder) {
 // the mutex protecting it), but we'll do another more careful pass later.
 func (b *broker) cleanHolders() {
 	for _, h := range b.holders {
-		if h.isClosed() || h.isStale() {
+		state := h.state()
+		if state == Closed || state == Stale {
 			b.leasedFraction -= h.targetFraction
 			h.reset()
 		}
@@ -294,7 +295,7 @@ func (b *broker) updateLeasedFraction() {
 	// Select the holders that haven't been allocated anything.
 	ws := weightedset.New[*holder](leaseRandomizer)
 	for _, h := range b.holders {
-		if h.isDormant() {
+		if h.state() == Off && !h.isDisabled() {
 			ws.Add(h, h.Lease.weight)
 		}
 	}
@@ -386,6 +387,24 @@ type holder struct {
 	disabled          bool
 }
 
+type holderState int
+const (
+	// Hasn't received any fleet fraction or target client count.
+        Off holderState = 1 << iota
+
+	// Has a target client count, but no clients yet.
+	Initialized
+
+	// Has been Initialized for at least staleHolderTime.
+        Stale
+
+	// Has received at least one client, and has been started.
+        Active
+
+	// Has finished executing, and has closed its IDSet.
+        Closed
+)
+
 // If a holder has been around for this long and hasn't received any
 // clients, that probably means its targetFraction is too small.
 const staleHolderTime = 5 * time.Minute
@@ -397,21 +416,46 @@ func newHolder(h Holder, l Lease) *holder {
 	}
 }
 
-func (h *holder) init(frac float64) {
-	h.is = types.NewIDSetProducer()
+func (h *holder) state() holderState {
+	switch {
+	case h.is == nil:
+		return Off
+	case !h.started:
+		if time.Now().Sub(h.initTime) < staleHolderTime {
+			return Initialized
+		}
+		return Stale
+	case h.is.Closed():
+		return Closed
+	default:
+		return Active
+	}
+}
+
+func (h *holder) reset() {
+	if h.targetFraction > 0 {
+		h.Lease.infof("resetting; was targeting %.3f of fleet, %d clients\n", h.targetFraction, h.targetClientCount)
+	}
+
+	h.is = nil
+	h.targetFraction = 0
 	h.targetClientCount = 0
-	h.setTargetFraction(frac)
 	h.initTime = time.Now()
 	h.started = false
 }
 
-func (h *holder) setTargetFraction(newFrac float64) {
-	oldFrac := h.targetFraction
-	if oldFrac == newFrac {
-		return
+func (h *holder) init(frac float64) {
+	h.is = types.NewIDSetProducer()
+	h.targetClientCount = 0
+	
+	if h.targetFraction != 0 {
+		h.Lease.panicf("assigning some fleet to a non-empty holder: %d\n", h.targetFraction)
 	}
-	h.targetFraction = newFrac
-	h.Lease.infof("targeting %.3f of fleet (was %.3f)\n", newFrac, oldFrac)
+	h.targetFraction = frac
+	h.Lease.infof("targeting %.3f of fleet\n", frac)
+
+	h.initTime = time.Now()
+	h.started = false
 }
 
 func (h *holder) setTargetCount(newCount int) {
@@ -435,18 +479,8 @@ func (h *holder) enable() {
 	h.Lease.infof("enabling")
 	h.disabled = false
 }
-
-// This holder has not received any clients, so it's not even trying to start.
-func (h *holder) isDormant() bool {
-	return h.targetClientCount == 0 && !h.disabled
-}
-
-func (h *holder) isStale() bool {
-	return h.isDormant() && time.Now().Sub(h.initTime) > staleHolderTime
-}
-
-func (h *holder) isClosed() bool {
-	return h.is != nil && h.is.Closed()
+func (h *holder) isDisabled() bool {
+	return h.disabled
 }
 
 func (h *holder) clientsWanted() int {
@@ -461,31 +495,23 @@ func (h *holder) addClients(clients []types.ID) bool {
 		// This holder is closed. Ignore it.
 		return false
 	}
-	h.logAssignment(clients)
 
-	if !h.started && h.is.Size() >= h.Lease.minClients {
-		h.started = true
-		h.Holder.Run(h.is.NewConsumer())
-	}
-	return true
-}
-
-func (h *holder) logAssignment(clients []types.ID) {
 	strs := make([]string, len(clients))
 	for i := range clients {
 		strs[i] = string(clients[i])
 	}
-	h.Lease.infof("assigning clients [ %s ]\n", strings.Join(strs, ", "))
-}
+	desc := fmt.Sprintf("clients [ %s ]", strings.Join(strs, ", "))
 
-func (h *holder) reset() {
-	if h.targetFraction > 0 {
-		h.Lease.infof("resetting; was targeting %.3f of fleet, %d clients\n", h.targetFraction, h.targetClientCount)
+	if !h.started && h.is.Size() >= h.Lease.minClients {
+		h.started = true
+		h.Holder.Run(h.is.NewConsumer())
+		h.Lease.infof("starting with %s\n", desc)
+	} else {
+		if !h.started {
+			h.Lease.infof("adding %s, not starting yet\n", desc)
+		} else {
+			h.Lease.infof("adding %s (already started)\n", desc)
+		}
 	}
-
-	h.is = nil
-	h.targetFraction = 0
-	h.targetClientCount = 0
-	h.initTime = time.Now()
-	h.started = false
+	return true
 }

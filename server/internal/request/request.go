@@ -57,21 +57,18 @@ func (r *Ping) Type() device.RequestType {
 // ------------------------------------------------------------------
 
 type Play struct {
-	File	fileset.File
 	Volume	int
-	Reps	int
-	Delay	time.Duration
-	Jitter	time.Duration
+	fileset.Play
 }
 
 func (r *Play) Execute(ctx context.Context, d *device.Device) error {
-	delay := r.Delay.Milliseconds()
-	jitter := r.Jitter.Milliseconds()
+	reps := r.Play.Reps
+	delay := r.Play.Delay.Milliseconds()
+	jitter := r.Play.Jitter.Milliseconds()
 
-	log.Infof("%s: playing %2d/%2d (%d reps, %d delay, %d jitter, expected time %.2f sec)",
-            d.Name(), r.File.Folder, r.File.File, r.Reps, delay, jitter, r.Duration().Seconds())
+	log.Infof("%s: playing %s", d.Name(), r.Play)
 
-	if r.Reps == 0 {
+	if reps == 0 {
 		return nil
 	}
 	volume := r.Volume
@@ -80,10 +77,10 @@ func (r *Play) Execute(ctx context.Context, d *device.Device) error {
 	}
 
 	_, err := d.Execute(ctx, "play", map[string]string {
-		"folder": fmt.Sprintf("%d", r.File.Folder),
-		"file":   fmt.Sprintf("%d", r.File.File),
+		"folder": fmt.Sprintf("%d", r.Play.File.Folder),
+		"file":   fmt.Sprintf("%d", r.Play.File.File),
 		"volume": fmt.Sprintf("%d", volume),
-		"reps":   fmt.Sprintf("%d", r.Reps),
+		"reps":   fmt.Sprintf("%d", reps),
 		"delay":  fmt.Sprintf("%d", delay),
 		"jitter": fmt.Sprintf("%d", jitter),
 	})
@@ -91,15 +88,8 @@ func (r *Play) Execute(ctx context.Context, d *device.Device) error {
 	return err
 }
 
-// The expected duration of this command.
-// Doesn't take jitter into account, because that happens on the client.
 func (r *Play) Duration() time.Duration {
-	delay := r.Delay.Seconds()
-	d := (r.File.Duration + delay) * float64(r.Reps)
-	if (r.Reps > 0) {
-		d -= delay	// don't delay after the last one
-	}
-	return time.Duration(d * float64(time.Second))
+	return r.Play.Duration()
 }
 
 func (r *Play) Type() device.RequestType {

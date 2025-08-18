@@ -124,6 +124,13 @@ func fillStructure(name string, structure any, typeName string, getValue func(st
 	return nil
 }
 
+func resetParams(params any) {
+	v := reflect.ValueOf(params).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		v.Field(i).Interface().(*random.Variable).Reset()
+	}
+}
+
 func (e *Effect) setSkipDrain() {
 	e.skipDrain = true
 }
@@ -203,18 +210,11 @@ func (e *Effect) run(is types.IDSetConsumer) {
 
 	is.Close()
 	if !e.skipDrain {
-		e.drainQueue(is.Snapshot())
+		DrainQueue(e.leaseType, is.Snapshot())
 	}
 }
 
-func resetParams(params any) {
-	v := reflect.ValueOf(params).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		v.Field(i).Interface().(*random.Variable).Reset()
-	}
-}
-
-func (e *Effect) drainQueue(clients []types.ID) {
+func DrainQueue(lt types.LeaseType, clients []types.ID) {
 	var b []byte
 	drained := make(map[types.ID]bool)
 	for _, id := range clients {
@@ -226,7 +226,7 @@ func (e *Effect) drainQueue(clients []types.ID) {
 	acks := make(chan types.ID)
 	drain := request.DrainQueue {
 		Ack:		acks,
-		LeaseType:	e.leaseType,
+		LeaseType:	lt,
 	}
 	client.EnqueueAfterDelay(clients, context.Background(), &drain, 0)
 
@@ -243,7 +243,7 @@ func (e *Effect) drainQueue(clients []types.ID) {
 		case now = <-ticker:
 		}
 
-		lease.ReturnClients(draining, e.leaseType)
+		lease.ReturnClients(draining, lt)
 		for _, id := range draining {
 			drained[id] = true
 		}
@@ -261,6 +261,6 @@ func (e *Effect) drainQueue(clients []types.ID) {
 			stillDraining = append(stillDraining, id)
 		}
 		log.Infof("[drain %016x, %s] %d clients still draining after %.1f seconds: %v",
-		    clientHash, e.leaseType, toDrain, now.Sub(start).Seconds(), stillDraining)
+		    clientHash, lt, toDrain, now.Sub(start).Seconds(), stillDraining)
 	}
 }

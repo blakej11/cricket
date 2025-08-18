@@ -587,6 +587,13 @@ func TestReturnClientsWhileFleetGrows(t *testing.T) {
 
 // ---------------------------------------------------------------------
 
+func testHolderState(t *testing.T, h *holder, want holderState) {
+	got := h.state()
+	if want != got {
+		t.Errorf("newly created holder: want state %v, got %v\n", want, got)
+	}
+}
+
 func TestHolder(t *testing.T) {
 	fe := newFakeEffect()
 
@@ -597,12 +604,7 @@ func TestHolder(t *testing.T) {
 		minClients:    3,
 	})
 
-	if !h.isDormant() {
-		t.Errorf("newly created holder is not dormant, should be\n")
-	}
-	if h.isClosed() {
-		t.Errorf("newly created holder is closed, shouldn't be\n")
-	}
+	testHolderState(t, h, Off)
 	if h.clientsWanted() != 0 {
 		t.Errorf("newly created holder wants clients already\n")
 	}
@@ -612,12 +614,7 @@ func TestHolder(t *testing.T) {
 	h.init(fleetFrac)
 	h.setTargetCount(targetClients)
 
-	if h.isDormant() {
-		t.Errorf("initialized holder is dormant, shouldn't be\n")
-	}
-	if h.isClosed() {
-		t.Errorf("initialized holder is closed, shouldn't be\n")
-	}
+	testHolderState(t, h, Initialized)
 	if h.clientsWanted() != targetClients {
 		t.Errorf("initialized holder wants %d clients, expected %d\n",
 		    h.clientsWanted(), targetClients)
@@ -634,18 +631,8 @@ func TestHolder(t *testing.T) {
 	if !reflect.DeepEqual(want, got) {
 		t.Errorf("TestHolder: wanted %q, got %q\n", want, got)
 	}
-	if h.isDormant() {
-		t.Errorf("finished holder is dormant, shouldn't be\n")
-	}
-	if !h.isClosed() {
-		t.Errorf("finished holder isn't closed, should be\n")
-	}
+	testHolderState(t, h, Closed)
 
 	h.reset()
-	if !h.isDormant() {
-		t.Errorf("resetted holder is not dormant, should be\n")
-	}
-	if h.isClosed() {
-		t.Errorf("resetted holder is closed, shouldn't be\n")
-	}
+	testHolderState(t, h, Off)
 }

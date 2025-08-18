@@ -43,14 +43,17 @@ func (n nonrandom) Run(ctx context.Context, ids types.IDSetConsumer, params any,
 
 	for _, f := range set {
 		cmd := &request.Play{
-			File: f,
-			Volume: 0, // default
-			Reps: 1,
-			Delay: 0,
-			Jitter: 0,
+			Play: fileset.Play {
+				File: f,
+				Reps: 1,
+			},
 		}
 		client.EnqueueAfterDelay(ids.Snapshot(), ctx, cmd, 0)
-		time.Sleep(cmd.Duration())
-		time.Sleep(p.GroupDelay.Duration())
+
+		sleepTimer := time.NewTimer(cmd.Duration() + p.GroupDelay.Duration())
+		select {
+			case <-sleepTimer.C:
+			case <-ctx.Done():
+		}
 	}
 }

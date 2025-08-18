@@ -2,7 +2,6 @@ package sound
 
 import (
 	"context"
-	"math"
 	"time"
 
 	"github.com/blakej11/cricket/internal/client"
@@ -33,43 +32,24 @@ func init() {
 }
 
 func (l loop) Run(ctx context.Context, ids types.IDSetConsumer, params any, fileSets any) {
+	deadline, _ := ctx.Deadline()
 	p := params.(*loopParams)
 	fs := fileSets.(*loopFileSets)
 
-	log.Infof("loop playing fileset %q", fs.Main.String())
-
 	for ctx.Err() == nil {
-		file := fs.Main.Pick()
-		reps := p.FileReps.Int()
-		if reps == 0 {
-			reps = 1
-		}
-
-		fileDur := file.Duration + p.FileDelay.MeanDuration().Seconds()
-		if deadline, ok := ctx.Deadline(); ok {
-			remaining := max(deadline.Sub(time.Now()).Seconds(), 0.0)
-			newReps := min(reps, int(math.Floor(remaining / fileDur)))
-			if reps != newReps {
-				log.Infof("cutting short %d/%d play: %d reps rather than %d",
-				    file.Folder, file.File, newReps, reps)
-				reps = newReps
-			}
-		}
-		if reps == 0 {
+		delay := p.FileDelay.MeanDuration()
+		jitter := p.FileDelay.VarianceDuration()
+		play := fs.Main.PickCarefully(deadline, p.FileReps.Int(), delay, jitter)
+		if play.Reps == 0 {
+			log.Infof("out of time to play anything on clients [ %s ]", ids.String())
+			log.Infof("  remaining = %v, fs %s", deadline.Sub(time.Now()), fs.Main)
 			return
 		}
 
-		cmd := &request.Play{
-			File:   file,
-			Volume: 0, // use default
-			Reps:   reps,
-			Delay:	p.FileDelay.MeanDuration(),
-			Jitter:	p.FileDelay.VarianceDuration(),
-		}
+		cmd := &request.Play{Play: play}
 		client.EnqueueAfterDelay(ids.Snapshot(), ctx, cmd, 0)
 
-		dur := time.Duration(cmd.Duration() + p.GroupDelay.Duration())
-		sleepTimer := time.NewTimer(dur)
+		sleepTimer := time.NewTimer(cmd.Duration() + p.GroupDelay.Duration())
 		select {
 			case <-sleepTimer.C:
 			case <-ctx.Done():

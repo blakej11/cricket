@@ -56,11 +56,11 @@ func (s storm) Run(ctx context.Context, ids types.IDSetConsumer, params any, fil
 		for _, c := range ids.Snapshot() {
 			for client.HasSoundUntil(c).Sub(time.Now()) < qThresh {
 				cmd := &request.Play{
-					File: fs.Main.Pick(),
 					Volume: s.volume.Int(),
-					Reps: 1,
-					Delay: 0,
-					Jitter: 0,
+					Play: fileset.Play {
+						File: fs.Main.Pick(),
+						Reps: 1,
+					},
 				}
 				delay := s.delay.Duration()
 				client.EnqueueAfterSoundEnds([]types.ID{c}, ctx, cmd, delay)

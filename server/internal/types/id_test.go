@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -44,60 +45,117 @@ func TestIDSetSnapshot(t *testing.T) {
 
 }
 
-func TestIDSetLaunch(t *testing.T) {
-	x := ID("x")
-	y := ID("y")
-	z := ID("z")
+func TestIDSetLaunchWithClose(t *testing.T) {
+	const numIDs = 100
 
 	p := NewIDSetProducer()
 	c := p.NewConsumer()
 
-	const goroutines = 10
-	done := make(chan any)
-	want := []ID{}
-	got := make([][]ID, goroutines)
+	chs := make([]chan ID, 10)
+	for i := range chs {
+		chs[i] = make(chan ID, numIDs)
+	}
 
-	new := []ID{x}
-	want = append(want, new...)
-	p.Add(new)
+	for _, ch := range chs {
+		go func() {
+			c.Launch(context.Background(), func(id ID) {
+				ch <- id
+				if len(ch) == cap(ch) / 2 {
+					c.Close()
+				}
+			})
+		}()
+	}
 
-	for i := 0; i < goroutines; i++ {
-		go func(i int) {
+	var want int
+	for want = 0; want < numIDs; want++ {
+		if !p.Add([]ID{ID(fmt.Sprintf("%02d", want))}) {
+			break
+		}
+	}
+
+	for chID, ch := range chs {
+		ids := []ID{}
+		for i := 0; i < want; i++ {
+			ids = append(ids, <-ch)
+		}
+		sort.Slice(ids, func (i, j int) bool {
+			return ids[i] < ids[j]
+		})
+		for idx, got := range ids {
+			want := ID(fmt.Sprintf("%02d", idx))
+			if want != got {
+				t.Errorf("#%d: wanted %q, got %q; bad ID set %v\n",
+				    chID, want, got, ids)
+			}
+		}
+	}
+}
+
+func TestIDSetLaunchWithCancel(t *testing.T) {
+	const numIDs = 100
+
+	p := NewIDSetProducer()
+	c := p.NewConsumer()
+
+	chs := make([]chan ID, 10)
+	for i := range chs {
+		chs[i] = make(chan ID, numIDs)
+	}
+
+	for _, ch := range chs {
+		go func() {
 			ctx, cancel := context.WithCancel(context.Background())
 
-			ch := make(chan ID, 3)
 			c.Launch(ctx, func(id ID) {
 				ch <- id
-				if len(ch) == cap(ch) {
+				if len(ch) == cap(ch) / 2 {
 					cancel()
 				}
 			})
-
-			ids := []ID{}
-			for len(ch) > 0 {
-				ids = append(ids, <-ch)
-			}
-			sort.Slice(ids, func (i, j int) bool {
-				return ids[i] < ids[j]
-			})
-			got[i] = ids
-			done <- struct{}{}
-		}(i)
+		}()
 	}
 
-	new = []ID{y, z}
-	want = append(want, new...)
-	p.Add(new)
-
-	for i := 0; i < goroutines; i++ {
-		<-done
-	}
-
-	c.Close()
-
-	for i := 0; i < goroutines; i++ {
-		if !reflect.DeepEqual(want, got[i]) {
-			t.Errorf("listen %d: wanted %q, got %q\n", i, want, got[i])
+	var want int
+	for want = 0; want < numIDs; want++ {
+		if !p.Add([]ID{ID(fmt.Sprintf("%02d", want))}) {
+			break
 		}
+	}
+
+	for chID, ch := range chs {
+		ids := []ID{}
+		for i := 0; i < want; i++ {
+			ids = append(ids, <-ch)
+		}
+		sort.Slice(ids, func (i, j int) bool {
+			return ids[i] < ids[j]
+		})
+		for idx, got := range ids {
+			want := ID(fmt.Sprintf("%02d", idx))
+			if want != got {
+				t.Errorf("#%d: wanted %q, got %q; bad ID set %v\n",
+				    chID, want, got, ids)
+			}
+		}
+	}
+}
+
+func TestIDSetRemove(t *testing.T) {
+	x := ID("x")
+	y := ID("y")
+
+	p := NewIDSetProducer()
+	c := p.NewConsumer()
+
+	want := []ID{x, y}
+	p.Add(want)
+	c.Close()
+	c.Remove([]ID{x})
+	c.Remove([]ID{y})
+	got := c.Snapshot()
+
+	if len(got) > 0 {
+		t.Errorf("remove: wanted empty snapshot, got %q\n", got)
 	}
 }

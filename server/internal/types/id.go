@@ -2,7 +2,10 @@ package types
 
 import (
 	"context"
+	"strings"
 	"sync"
+
+	"github.com/blakej11/cricket/internal/log"
 )
 
 // ID is the main way that clients are referred to.
@@ -65,13 +68,23 @@ func (is *idSet) NewConsumer() IDSetConsumer {
 type IDSetConsumer interface {
 	Launch(ctx context.Context, f func(ID))
 	Snapshot() []ID
+	String() string
 	Close()
+	Remove([]ID)
 }
 
 // For each ID in the idSet, call "go f(id)" on it.
 // This is also done for any new IDs added to the set.
-// This returns only once the passed-in context expires.
+//
+// "go f(id)" will be called exactly once for every ID
+// that is successfully added by a call to is.Add().
+//
+// If the passed-in context expires, the idSet is closed.
+//
+// This returns after the idSet is closed.
 func (is *idSet) Launch(ctx context.Context, f func(ID)) {
+	ctxDone := ctx.Done()
+
 	is.clientMu.Lock()
 	ch := make(chan ID)
 	is.listeners = append(is.listeners, ch)
@@ -83,10 +96,21 @@ func (is *idSet) Launch(ctx context.Context, f func(ID)) {
 	}
 	for {
 		select {
-			case id := <-ch:
-				go f(id)
-			case <-ctx.Done():
+		case id, ok := <-ch:
+			if !ok {
+				// The set has been closed.
 				return
+			}
+			go f(id)
+		case <-ctxDone:
+			// Stop adding any new IDs to the set.
+			// This must be done asynchronously,
+			// in case this is racing with is.Add().
+			go is.Close()
+
+			// Only take the first select arm
+			// from now on.
+			ctxDone = nil
 		}
 	}
 }
@@ -95,6 +119,14 @@ func (is *idSet) Snapshot() []ID {
 	is.clientMu.Lock()
 	defer is.clientMu.Unlock()
 	return is.snapshotLocked()
+}
+
+func (is *idSet) String() string {
+	var result []string
+	for _, i := range is.Snapshot() {
+		result = append(result, string(i))
+	}
+	return strings.Join(result, ", ")
 }
 
 func (is *idSet) snapshotLocked() []ID {
@@ -107,9 +139,35 @@ func (is *idSet) Close() {
 	is.clientMu.Lock()
 	defer is.clientMu.Unlock()
 
+	if is.closed {
+		return
+	}
 	is.closed = true
 	for _, ch := range is.listeners {
 		close(ch)
+	}
+}
+
+func (is *idSet) Remove(ids []ID) {
+	is.clientMu.Lock()
+	defer is.clientMu.Unlock()
+
+	if !is.closed {
+		log.Panicf("idset.Remove: trying to remove IDs from non-closed set %v", is)
+	}
+
+	for _, id := range ids {
+		found := false
+		for idx, setID := range is.ids {
+			if id == setID {
+				is.ids = append(is.ids[:idx], is.ids[idx+1:]...)
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.Panicf("idset.Remove: failed to remove ID %q from %v", id, is)
+		}
 	}
 }
 
@@ -135,6 +193,19 @@ func (fis *fixedIDSet) Snapshot() []ID {
 	return []ID{fis.id}
 }
 
+func (fis *fixedIDSet) String() string {
+	return string(fis.id)
+}
+
 func (fis *fixedIDSet) Close() {
 }
 
+func (fis *fixedIDSet) Remove(ids []ID) {
+	for _, id := range ids {
+		if fis.id == id {
+			fis.id = ID("")
+		} else {
+			log.Panicf("idset.Remove: failed to remove ID %q from %v", id, fis)
+		}
+	}
+}
