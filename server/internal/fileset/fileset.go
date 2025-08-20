@@ -63,8 +63,8 @@ func (fs *Set) PickCarefully(deadline time.Time, reps int, delay, jitter time.Du
 	}
 
 	file := fs.Pick()
-	reps = min(reps, findReps(file, deadline, delay))
-	if reps == 0 {
+	actualReps := min(reps, findReps(file, deadline, delay))
+	if actualReps == 0 {
 		remaining := max(deadline.Sub(time.Now()).Seconds(), 0.0)
 		var files []File
 		for _, f := range fs.files {
@@ -76,15 +76,15 @@ func (fs *Set) PickCarefully(deadline time.Time, reps int, delay, jitter time.Du
 			return Play{}
 		}
 		file = pick(files)
-		reps = findReps(file, deadline, delay)
-		if reps == 0 {
+		actualReps := min(reps, findReps(file, deadline, delay))
+		if actualReps == 0 {
 			return Play{}
 		}
 	}
 
 	return Play{
 		File:   file,
-		Reps:   reps,
+		Reps:   actualReps,
 		Delay:	delay,
 		Jitter:	jitter,
 	}
