@@ -41,8 +41,7 @@ func (l loop) Run(ctx context.Context, ids types.IDSetConsumer, params any, file
 		jitter := p.FileDelay.VarianceDuration()
 		play := fs.Main.PickCarefully(deadline, p.FileReps.Int(), delay, jitter)
 		if play.Reps == 0 {
-			log.Infof("out of time to play anything on clients [ %s ]", ids.String())
-			log.Infof("  remaining = %v, fs %s", deadline.Sub(time.Now()), fs.Main)
+			log.Debugf("out of time to play anything on clients [ %s ]", ids.String())
 			return
 		}
 

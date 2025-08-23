@@ -305,7 +305,7 @@ func (d *Device) SetNetLocation(newLoc types.NetLocation) {
 	defer d.locMu.Unlock()
 
 	if !d.netLocation.Equal(newLoc) {
-		log.Infof("%s: updating IP to %s", d.Name(), newLoc.String())
+		log.Debugf("%s: updating IP to %s", d.Name(), newLoc.String())
 		d.netLocation = newLoc
 	}
 }

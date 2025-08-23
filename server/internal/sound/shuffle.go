@@ -25,7 +25,7 @@ func (s shuffle) Run(ctx context.Context, ids types.IDSetConsumer, params any, f
 		// files that can be played before the context expires. That
 		// implies that would be a waste to add any more clients at
 		// this point, so close the fileset.
-		log.Infof("shuffle: client [ %s ] closing and draining early", string(id))
+		log.Debugf("shuffle: client [ %s ] closing and draining early", string(id))
 		ids.Close()
 		effect.DrainQueue(types.Sound, []types.ID{id})
 	})

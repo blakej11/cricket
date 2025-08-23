@@ -203,9 +203,9 @@ func (e *Effect) run(is types.IDSetConsumer) {
 	resetParams(e.parameters)
         dur := e.duration.Duration()
         ctx, cancel := context.WithTimeout(context.Background(), dur)
-	log.Infof("Start  effect %q: target duration %v", e.name, dur)
+	log.Debugf("Start  effect %q: target duration %v", e.name, dur)
 	e.alg.Run(ctx, is, e.parameters, e.fileSets)
-	log.Infof("Finish effect %q", e.name)
+	log.Debugf("Finish effect %q", e.name)
 	cancel()
 
 	is.Close()
@@ -250,7 +250,7 @@ func DrainQueue(lt types.LeaseType, clients []types.ID) {
 		toDrain -= len(draining)
 		draining = nil
 
-		if now.Sub(start) <= 10 * time.Second {
+		if int(now.Sub(start) / time.Second) % 10 != 0 {
 			continue
 		}
 		stillDraining := []types.ID{}
@@ -260,7 +260,7 @@ func DrainQueue(lt types.LeaseType, clients []types.ID) {
 			}
 			stillDraining = append(stillDraining, id)
 		}
-		log.Infof("[drain %016x, %s] %d clients still draining after %.1f seconds: %v",
+		log.Warningf("[drain %016x, %s] %d clients still draining after %.1f seconds: %v",
 		    clientHash, lt, toDrain, now.Sub(start).Seconds(), stillDraining)
 	}
 }

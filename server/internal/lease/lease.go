@@ -76,8 +76,8 @@ func validate(l *Lease) (*Lease, error) {
 	return l, nil
 }
 
-func (l *Lease) infof(format string, v ...any) {
-	log.Infof("lease: %s (%v): %s", l.name, l.Type, fmt.Sprintf(format, v...))
+func (l *Lease) debugf(format string, v ...any) {
+	log.Debugf("lease: %s (%v): %s", l.name, l.Type, fmt.Sprintf(format, v...))
 }
 
 func (l *Lease) panicf(format string, v ...any) {
@@ -346,7 +346,7 @@ func (b *broker) assignClients() {
 		}
 	}
 	if ws.Len() == 0 {
-		log.Infof("lease: assignClients: no clients wanted\n")
+		log.Debugf("lease: assignClients: no clients wanted\n")
 		return
 	}
 
@@ -434,7 +434,7 @@ func (h *holder) state() holderState {
 
 func (h *holder) reset() {
 	if h.targetFraction > 0 {
-		h.Lease.infof("resetting; was targeting %.3f of fleet, %d clients\n", h.targetFraction, h.targetClientCount)
+		h.Lease.debugf("resetting; was targeting %.3f of fleet, %d clients\n", h.targetFraction, h.targetClientCount)
 	}
 
 	h.is = nil
@@ -452,7 +452,7 @@ func (h *holder) init(frac float64) {
 		h.Lease.panicf("assigning some fleet to a non-empty holder: %d\n", h.targetFraction)
 	}
 	h.targetFraction = frac
-	h.Lease.infof("targeting %.3f of fleet\n", frac)
+	h.Lease.debugf("targeting %.3f of fleet\n", frac)
 
 	h.initTime = time.Now()
 	h.started = false
@@ -467,16 +467,16 @@ func (h *holder) setTargetCount(newCount int) {
 		h.Lease.panicf("decreasing target client count: %d -> %d\n", oldCount, newCount)
 	}
 	h.targetClientCount = newCount
-	h.Lease.infof("targeting %d clients (was %d)\n", newCount, oldCount)
+	h.Lease.debugf("targeting %d clients (was %d)\n", newCount, oldCount)
 }
 
 // interfaces for testing
 func (h *holder) disable() {
-	h.Lease.infof("disabling")
+	h.Lease.debugf("disabling")
 	h.disabled = true
 }
 func (h *holder) enable() {
-	h.Lease.infof("enabling")
+	h.Lease.debugf("enabling")
 	h.disabled = false
 }
 func (h *holder) isDisabled() bool {
@@ -505,12 +505,12 @@ func (h *holder) addClients(clients []types.ID) bool {
 	if !h.started && h.is.Size() >= h.Lease.minClients {
 		h.started = true
 		h.Holder.Run(h.is.NewConsumer())
-		h.Lease.infof("starting with %s\n", desc)
+		h.Lease.debugf("starting with %s\n", desc)
 	} else {
 		if !h.started {
-			h.Lease.infof("adding %s, not starting yet\n", desc)
+			h.Lease.debugf("adding %s, not starting yet\n", desc)
 		} else {
-			h.Lease.infof("adding %s (already started)\n", desc)
+			h.Lease.debugf("adding %s (already started)\n", desc)
 		}
 	}
 	return true

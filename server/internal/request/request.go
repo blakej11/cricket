@@ -66,7 +66,7 @@ func (r *Play) Execute(ctx context.Context, d *device.Device) error {
 	delay := r.Play.Delay.Milliseconds()
 	jitter := r.Play.Jitter.Milliseconds()
 
-	log.Infof("%s: playing %s", d.Name(), r.Play)
+	log.Debugf("%s: playing %s", d.Name(), r.Play)
 
 	if reps == 0 {
 		return nil
@@ -221,7 +221,7 @@ func (r *KeepVoltageUpdated) Execute(ctx context.Context, d *device.Device) erro
 
 	d.SetStatistic(voltage, float32(p))
 	d.SetTimestamp(lastVoltage, time.Now())
-	log.Infof("%s: voltage is %.2f", d.Name(), p)
+	log.Debugf("%s: voltage is %.2f", d.Name(), p)
 
 	d.Enqueue(ctx, r, voltageUpdateDelay, device.FromNow)
 	return nil
