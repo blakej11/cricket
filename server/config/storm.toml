@@ -1,0 +1,118 @@
+DefaultVolume = 24
+
+[Clients]
+64e8338918b40000 = { Name = "01" }
+64e8338492e40000 = { Name = "02" }
+64e8338553940000 = { Name = "03" }
+64e83384b8880000 = { Name = "04" }
+64e83384c7f00000 = { Name = "05" }
+64e8338682400000 = { Name = "06" }
+64e833868a100000 = { Name = "07" }
+64e83383eee40000 = { Name = "08" }
+64e833841c900000 = { Name = "09" }
+64e8338589840000 = { Name = "10" }
+64e833863cf40000 = { Name = "11" }
+64e833848b180000 = { Name = "12" }
+64e83386ac2c0000 = { Name = "13" }
+64e8338980500000 = { Name = "14" }
+64e8338580540000 = { Name = "15" }
+64e83385929c0000 = { Name = "16" }
+64e8338499e40000 = { Name = "17" }
+64e8338682f80000 = { Name = "18" }
+64e83386a7a80000 = { Name = "19" }
+64e8338447200000 = { Name = "20" }
+64e8338401540000 = { Name = "21" }
+64e8338572140000 = { Name = "22" }
+64e8338419a40000 = { Name = "23" }
+64e8338453400000 = { Name = "24" }
+5432048637f80000 = { Name = "25" }
+54320488861c0000 = { Name = "26" }
+64e83385652c0000 = { Name = "27" }
+64e833855f300000 = { Name = "28" }
+64e83386afcc0000 = { Name = "29" }
+64e833868e040000 = { Name = "30" }
+64e833855c6c0000 = { Name = "31" }
+64e8338493700000 = { Name = "32" }
+64e8338697e00000 = { Name = "33" }
+64e83383fde40000 = { Name = "34" }
+64e83384a8a40000 = { Name = "35" }
+64e833855d340000 = { Name = "36" }
+64e83384f5f80000 = { Name = "37" }
+64e83383e1e40000 = { name = "38" }
+64e833845cd00000 = { name = "39" }
+64e833857f040000 = { name = "40" }
+
+[Files]
+# "raindrops/aluminumFoil" =       { folder = 10, file =  1, duration = 41.560 }
+"raindrops/backOfPot" =            { folder = 10, file =  2, duration = 29.309 }
+# "raindrops/bathroomScale" =      { folder = 10, file =  3, duration = 36.571 }
+"raindrops/bathtub" =              { folder = 10, file =  4, duration = 20.558 }
+"raindrops/cardboardOrPlastic" =   { folder = 10, file =  5, duration = 37.067 }
+"raindrops/fakeLeaves" =           { folder = 10, file =  6, duration = 49.554 }
+"raindrops/foldedUpTarp" =         { folder = 10, file =  7, duration = 35.813 }
+# "raindrops/fourLayerAluminum" =  { folder = 10, file =  8, duration = 27.559 }
+# "raindrops/glassOfWater" =       { folder = 10, file =  9, duration = 27.062 }
+# "raindrops/insideOfPot" =        { folder = 10, file = 10, duration = 30.929 }
+"raindrops/paper" =                { folder = 10, file = 11, duration = 48.378 }
+"raindrops/paperOnTowel" =         { folder = 10, file = 12, duration = 41.325 }
+"raindrops/paperOnTowel2" =        { folder = 10, file = 13, duration = 65.201 }
+"raindrops/plastic1" =             { folder = 10, file = 14, duration = 27.324 }
+"raindrops/plastic2" =             { folder = 10, file = 15, duration = 36.075 }
+"raindrops/rocks1" =               { folder = 10, file = 16, duration = 29.805 }
+"raindrops/rocksLowflow1" =        { folder = 10, file = 17, duration = 46.053 }
+"raindrops/rocksLowflow2" =        { folder = 10, file = 18, duration = 36.075 }
+"raindrops/rocksHighflow" =        { folder = 10, file = 19, duration = 62.067 }
+"raindrops/dirtLowflow" =          { folder = 10, file = 20, duration = 20.558 }
+"raindrops/dirtHighflow" =         { folder = 10, file = 21, duration = 37.433 }
+"raindrops/treeLeavesLowflow" =    { folder = 10, file = 22, duration = 36.571 }
+"raindrops/treeLeavesHighflow" =   { folder = 10, file = 23, duration = 47.699 }
+"raindrops/pothosLowflow1" =       { folder = 10, file = 24, duration = 48.065 }
+"raindrops/pothosLowflow2" =       { folder = 10, file = 25, duration =  7.862 }
+"raindrops/pothosHighflow" =       { folder = 10, file = 26, duration = 54.569 }
+"raindrops/fakeFlowersLowflow" =   { folder = 10, file = 27, duration = 56.058 }
+"raindrops/fakeFlowersHighflow1" = { folder = 10, file = 28, duration = 31.059 }
+"raindrops/fakeFlowersHighflow2" = { folder = 10, file = 29, duration = 30.249 }
+"raindrops/rocks2" =               { folder = 10, file = 30, duration = 11.807 }
+
+[FileSets]
+"raindrops1"       = { regex = "^raindrops/" }
+"raindrops2"       = { regex = "^raindrops/" }
+"raindrops3"       = { regex = "^raindrops/" }
+
+[Effects.stormclips]
+Algorithm             = "storm"
+Duration              = { Mean = 3600 }
+FileSets.Intensity1   = "raindrops1"
+FileSets.Intensity2   = "raindrops2"
+FileSets.Intensity3   = "raindrops3"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.Weight          = 1
+Lease.FleetFraction   = { Mean = 1.0 }
+Parameters.VolumeMin    = { Mean = 0 }
+Parameters.VolumeMax    = { Mean = 48 }
+Parameters.Intensity    = { Mean = 0.5, Variance = 0.1, Distribution = "normal" }
+Parameters.Acceleration = { Mean = 1.0, Variance = 0.3, Distribution = "normal" }
+Parameters.Noise        = { Mean = 0, Variance = 0.001, Distribution = "normal" }
+
+[Effects.darkness]
+Algorithm             = "darkness"
+Duration              = { Mean = 30000 }
+Lease.MinClients      = 1
+Lease.Type            = "light"
+Lease.Weight          = 1
+Lease.FleetFraction   = { Mean = 0.5 }
+
+[Effects.unison]
+Algorithm             = "unison"
+Duration              = { Mean = 30 }
+Lease.MinClients      = 1
+Lease.Type            = "light"
+Lease.Weight          = 0
+Lease.FleetFraction   = { Mean = 1.0 }
+Lease.MaxWait         = { Mean = 30 }
+Parameters.BlinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
+Parameters.BlinkDelay = { Mean = 0.1, Variance = 0.05,Distribution = "uniform" }
+Parameters.BlinkReps  = { Mean = 4,   Variance = 1,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
+Parameters.GroupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }

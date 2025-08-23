@@ -49,6 +49,15 @@ func (fs Set) String() string {
 	return fmt.Sprintf("%s (%s)", fs.name, strings.Join(results, ", "))
 }
 
+func (fs Set) AverageDuration() time.Duration {
+	total := 0.0
+	for _, f := range fs.files {
+		total += f.Duration
+	}
+	average := total / float64(len(fs.files))
+	return time.Duration(float64(time.Second) * average)
+}
+
 func (fs *Set) Pick() File {
 	return pick(fs.files)
 }

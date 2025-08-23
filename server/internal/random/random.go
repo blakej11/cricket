@@ -129,6 +129,11 @@ func (v *Variable) AdjustMean(delta float64) {
 //
 // In all cases, the value returned will always be non-negative.
 func (v *Variable) Float64() float64 {
+	return max(v.Float64All(), 0.0)
+}
+
+// Float64All() returns values that could be negative.
+func (v *Variable) Float64All() float64 {
 	v.maybeUpdateMeanAndVariance()
 
 	value := v.mean
@@ -140,8 +145,9 @@ func (v *Variable) Float64() float64 {
 	case Uniform:
 		value += v.variance * rand.Float64() - v.variance / 2.0
 	}
-	return max(value, 0.0)
+	return value
 }
+
 
 func (v *Variable) Int() int {
 	return int(v.Float64())
