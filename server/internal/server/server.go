@@ -75,7 +75,7 @@ func parseVirtualCricketAddr(virtualCricketAddr string, fileSets map[string]*fil
 			return nil, fmt.Errorf("couldn't parse virtual cricket address %q\n", virtualCricketAddr)
 		}
 		addr := net.ParseIP(s[0])
-		port, err := strconv.ParseInt(s[0], 10, 32)
+		port, err := strconv.ParseInt(s[1], 10, 32)
 		if addr == nil || err != nil {
 			return nil, fmt.Errorf("couldn't parse virtual cricket address %q\n", virtualCricketAddr)
 		}
