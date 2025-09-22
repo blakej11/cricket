@@ -178,11 +178,15 @@ func (bms *builtinMockServer) blink(cricket string, args url.Values) (string, er
 }
 
 func (bms *builtinMockServer) enqueue(cricket string, t types.LeaseType, dur float64) time.Duration {
-	endTime := time.Now()
+	now := time.Now()
+	endTime := now
 	if queue := bms.requests[cricket][t]; queue != nil {
 		endTime = queue[len(queue) - 1]
 	}
-	remaining := time.Now().Sub(endTime)
+	remaining := endTime.Sub(now)
+	if remaining < 0 {
+		remaining = time.Duration(0)
+	}
 	endTime = endTime.Add(time.Duration(dur * float64(time.Second)))
 	bms.requests[cricket][t] = append(bms.requests[cricket][t], endTime)
 	return remaining
