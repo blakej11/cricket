@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+        "github.com/blakej11/cricket/internal/builtinvc"
         "github.com/blakej11/cricket/internal/client"
         "github.com/blakej11/cricket/internal/effect"
         "github.com/blakej11/cricket/internal/fileset"
@@ -65,6 +66,9 @@ func New(c Config, virtualCricketAddr string) (*Server, error) {
 }
 
 func parseVirtualCricketAddr(virtualCricketAddr string, fileSets map[string]*fileset.Set) (*types.NetLocation, error) {
+	if virtualCricketAddr == "builtin" {
+		return builtinvc.Start(fileSets)
+	}
 	if virtualCricketAddr != "" {
 		s := strings.Split(virtualCricketAddr, ":")
 		if len(s) != 2 {
