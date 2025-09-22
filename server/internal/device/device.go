@@ -196,7 +196,7 @@ func (d *Device) Execute(ctx context.Context, endpoint string, args map[string]s
 		if args == nil {
 			args = make(map[string]string)
 		}
-		args["cricketID"] = string(d.id)
+		args["cricketId"] = string(d.id)
 	}
 
 	if args != nil {
@@ -228,6 +228,8 @@ func (d *Device) Execute(ctx context.Context, endpoint string, args map[string]s
 		}
 		return "", fmt.Errorf("%s %s: err = %v", times, message, err)
 	}
+
+	log.Debugf("URL: %v\n", url)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

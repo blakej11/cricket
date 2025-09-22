@@ -76,12 +76,12 @@ func (bms *builtinMockServer) handle(w http.ResponseWriter, r *http.Request) {
 		fail(w, fmt.Sprintf("failed to parse: %v\n", err))
 		return
 	}
-	cricket := args.Get("cricketID")
+	cricket := args.Get("cricketId")
 	if cricket == "" {
 		fail(w, "no cricket specified")
 		return
 	}
-	args.Del("cricketID")
+	args.Del("cricketId")
 	if _, ok := bms.requests[cricket]; !ok {
 		bms.requests[cricket] = make(map[types.LeaseType][]time.Time)
 		bms.requests[cricket][types.Sound] = nil
