@@ -43,9 +43,11 @@ DefaultVolume = 24
 64e833857f040000 = { name = "40" }
 
 [FileSets]
-"raindrops1"       = { regex = "^raindrops/" }
-"raindrops2"       = { regex = "^raindrops/" }
-"raindrops3"       = { regex = "^raindrops/" }
+"raindrops1"       = { regex = "^rain1x/" }
+"raindrops2"       = { regex = "^rain2x/" }
+"raindrops3"       = { regex = "^rain3x/" }
+"raindrops4"       = { regex = "^rain4x/" }
+"raindrops5"       = { regex = "^rain5x/" }
 
 [Effects.stormclips]
 Algorithm             = "storm"
@@ -53,6 +55,8 @@ Duration              = { Mean = 3600 }
 FileSets.Intensity1   = "raindrops1"
 FileSets.Intensity2   = "raindrops2"
 FileSets.Intensity3   = "raindrops3"
+FileSets.Intensity4   = "raindrops4"
+FileSets.Intensity5   = "raindrops5"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.Weight          = 1

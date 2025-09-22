@@ -150,8 +150,8 @@ func (bms *builtinMockServer) play(cricket string, args url.Values) (string, err
 	}
 	fullDur += 0.5
 
-	bms.enqueue(cricket, types.Sound, fullDur)
-	desc := fmt.Sprintf("%d/%d, %3f -> %3f sec", folder, file, dur, fullDur)
+	remaining := bms.enqueue(cricket, types.Sound, dur)
+	desc := fmt.Sprintf("%.3f -> %.3f sec (was %.3f)", dur, fullDur, remaining.Seconds())
 	return desc, nil
 }
 
@@ -172,18 +172,20 @@ func (bms *builtinMockServer) blink(cricket string, args url.Values) (string, er
 	dur /= 1000.0
 	fullDur /= 1000.0
 
-	bms.enqueue(cricket, types.Light, dur)
-	desc := fmt.Sprintf("%3f -> %3f sec", dur, fullDur)
+	remaining := bms.enqueue(cricket, types.Light, dur)
+	desc := fmt.Sprintf("%.3f -> %.3f sec (was %.3f)", dur, fullDur, remaining.Seconds())
 	return desc, nil
 }
 
-func (bms *builtinMockServer) enqueue(cricket string, t types.LeaseType, dur float64) {
+func (bms *builtinMockServer) enqueue(cricket string, t types.LeaseType, dur float64) time.Duration {
 	endTime := time.Now()
 	if queue := bms.requests[cricket][t]; queue != nil {
 		endTime = queue[len(queue) - 1]
 	}
+	remaining := time.Now().Sub(endTime)
 	endTime = endTime.Add(time.Duration(dur * float64(time.Second)))
 	bms.requests[cricket][t] = append(bms.requests[cricket][t], endTime)
+	return remaining
 }
 
 func (bms *builtinMockServer) pending(cricket string, t types.LeaseType) int {
