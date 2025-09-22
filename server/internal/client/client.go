@@ -5,6 +5,7 @@ package client
 
 import (
 	"context"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ var data struct {
 	// Client information from startup configuration.
 	defaultVolume	int
 	config		map[types.ID]types.Client
+	virtualCricketLoc *types.NetLocation
 }
 
 type adminMessage interface {
@@ -35,14 +37,19 @@ func init() {
 	data.config = make(map[types.ID]types.Client)
 }
 
-func Configure(defaultVolume int, config map[types.ID]types.Client) { 
+func Configure(defaultVolume int, config map[types.ID]types.Client, virtualCricketLoc *types.NetLocation) {
 	data.defaultVolume = defaultVolume
 	data.config = config
+	data.virtualCricketLoc = virtualCricketLoc
 }
 
 func Start() {
 	ch := make(chan adminMessage)
-	go mDNSListener(ch)
+	if data.virtualCricketLoc != nil {
+		go fakeMDNSForVirtualCricket(ch)
+	} else {
+		go mDNSListener(ch)
+	}
 	go func() {
 		for msg := range ch {
 			msg.handle()
@@ -113,6 +120,40 @@ func mDNSListener(out chan<- adminMessage) {
 	<-ctx.Done()	// should not be reached
 }
 
+func fakeMDNSForVirtualCricket(out chan<- adminMessage) {
+	type clientData struct {
+		id      types.ID
+		seconds float64
+	}
+
+	sum := 0.0
+	var clients []clientData
+	for id := range data.config {
+		cd := clientData{
+			id: id,
+			seconds: rand.Float64(),
+		}
+		clients = append(clients, cd)
+		sum += cd.seconds
+	}
+	rand.Shuffle(len(clients), func(i, j int) {
+		clients[i], clients[j] = clients[j], clients[i]
+	})
+
+	for _, c := range clients {
+		out <- addClientMessage{
+			id:       c.id,
+			location: *data.virtualCricketLoc,
+		}
+		time.Sleep(time.Duration(2.0 * float64(time.Minute) * c.seconds / sum))
+	}
+
+	// this could re-send client add requests, since that's something
+	// that happens in the real world, but right now I'm not bothering.
+	ctx := context.Background()
+	<-ctx.Done()	// should not be reached
+}
+
 type addClientMessage struct {
 	id		types.ID
 	location	types.NetLocation
@@ -132,7 +173,15 @@ func (r addClientMessage) handle() {
 		name = conf.Name
 	}
 
-	d := device.New(r.id, name, r.location, physLocation, data.defaultVolume)
+	d := device.New(device.Config{
+		ID:           r.id,
+		Name:         name,
+		NetLocation:  r.location,
+		PhysLocation: physLocation,
+		TargetVolume: data.defaultVolume,
+		UseIDInURL:   data.virtualCricketLoc != nil,
+	})
+
 	log.Infof("adding new client: %s", d.FullName())
 
 	data.devices[r.id] = d

@@ -13,6 +13,8 @@ import (
 
 var configFile = flag.String("config", "", "path to config file")
 
+var virtualCricketAddr = flag.String("virtual", "", "if an [IP address]:[port] pair, connect all crickets to that address; if \"builtin\", start a simple virtual cricket server")
+
 func main() {
 	var config server.Config
 
@@ -28,7 +30,7 @@ func main() {
 	if err := toml.Unmarshal(blob, &config); err != nil {
 		log.Fatalf("failed to unmarshal server config: %w", err)
 	}
-	s, err := server.New(config)
+	s, err := server.New(config, *virtualCricketAddr)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

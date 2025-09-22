@@ -47,10 +47,20 @@ const (
 	nextExecute = "next time Execute() can proceed"
 )
 
+type Config struct {
+	ID		types.ID
+	Name		string
+	NetLocation	types.NetLocation
+	PhysLocation	types.PhysLocation
+	TargetVolume    int
+	UseIDInURL	bool
+}
+
 type Device struct {
 	id		types.ID
 	name		string
 	physLocation	types.PhysLocation
+	useIDInURL	bool
 
 	netLocation	types.NetLocation
 	locMu		sync.Mutex
@@ -69,18 +79,19 @@ type requestWithContext struct {
 	ctx	context.Context
 }
 
-func New(id types.ID, name string, netLocation types.NetLocation, physLocation types.PhysLocation, volume int) *Device {
+func New(c Config) *Device {
 	d := &Device{
-		id:		id,
-		name:		name,
-		physLocation:	physLocation,
+		id:		c.ID,
+		name:		c.Name,
+		physLocation:	c.PhysLocation,
+		useIDInURL:   	c.UseIDInURL,
 
 		timedHeap:	timedheap.New[requestWithContext](),
 		timestamps:	make(map[string]time.Time),
 		statistics:	make(map[string]float32),
 	}
-	d.SetNetLocation(netLocation)
-	d.SetTargetVolume(volume)
+	d.SetNetLocation(c.NetLocation)
+	d.SetTargetVolume(c.TargetVolume)
 	d.SetTimestamp(creation, time.Now())
 	return d
 }
@@ -117,6 +128,8 @@ func (d *Device) Enqueue(ctx context.Context, req Request, delay time.Duration, 
 	d.heapMu.Lock()
 	defer d.heapMu.Unlock()
 
+	// When the last currently enheaped message of this type is expected
+	// to finish playing.
 	endStampName := ""
 	switch req.Type() {
 	case Sound:
@@ -128,23 +141,24 @@ func (d *Device) Enqueue(ctx context.Context, req Request, delay time.Duration, 
 	default:
 		log.Fatalf("device.Enqueue: unknown type %v\n", req.Type())
 	}
-
-	earliest := time.Now()
-	endTime := d.GetTimestamp(endStampName)
-	if endTime.IsZero() {
-		endTime = earliest
+	now := time.Now()
+	heapEndTime := d.GetTimestamp(endStampName)
+	if heapEndTime.IsZero() {
+		heapEndTime = now
 	}
 
+	// The earliest time that the specified request can execute.
+	var earliest time.Time
 	switch fromWhen {
 	case FromNow:
-		earliest = earliest.Add(delay)
+		earliest = now.Add(delay)
 	case FromEnd:
-		earliest = endTime.Add(delay)
+		earliest = heapEndTime.Add(delay)
 	}
 
-	thisEndTime := earliest.Add(req.Duration())
-	if endTime.Before(thisEndTime) {
-		d.SetTimestamp(endStampName, endTime)
+	reqEndTime := earliest.Add(req.Duration())
+	if heapEndTime.Before(reqEndTime) {
+		d.SetTimestamp(endStampName, reqEndTime)
 	}
 
 	d.timedHeap.Add(requestWithContext{req: req, ctx: ctx}, earliest)
@@ -177,6 +191,13 @@ func (d *Device) Execute(ctx context.Context, endpoint string, args map[string]s
 
 	url := fmt.Sprintf("http://%s/%s", d.GetNetLocation(), endpoint)
 	desc := fmt.Sprintf("%q", endpoint)
+
+	if d.useIDInURL {
+		if args == nil {
+			args = make(map[string]string)
+		}
+		args["cricketID"] = string(d.id)
+	}
 
 	if args != nil {
 		var equalArgs []string
