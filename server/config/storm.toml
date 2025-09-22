@@ -42,38 +42,6 @@ DefaultVolume = 24
 64e833845cd00000 = { name = "39" }
 64e833857f040000 = { name = "40" }
 
-[Files]
-# "raindrops/aluminumFoil" =       { folder = 10, file =  1, duration = 41.560 }
-"raindrops/backOfPot" =            { folder = 10, file =  2, duration = 29.309 }
-# "raindrops/bathroomScale" =      { folder = 10, file =  3, duration = 36.571 }
-"raindrops/bathtub" =              { folder = 10, file =  4, duration = 20.558 }
-"raindrops/cardboardOrPlastic" =   { folder = 10, file =  5, duration = 37.067 }
-"raindrops/fakeLeaves" =           { folder = 10, file =  6, duration = 49.554 }
-"raindrops/foldedUpTarp" =         { folder = 10, file =  7, duration = 35.813 }
-# "raindrops/fourLayerAluminum" =  { folder = 10, file =  8, duration = 27.559 }
-# "raindrops/glassOfWater" =       { folder = 10, file =  9, duration = 27.062 }
-# "raindrops/insideOfPot" =        { folder = 10, file = 10, duration = 30.929 }
-"raindrops/paper" =                { folder = 10, file = 11, duration = 48.378 }
-"raindrops/paperOnTowel" =         { folder = 10, file = 12, duration = 41.325 }
-"raindrops/paperOnTowel2" =        { folder = 10, file = 13, duration = 65.201 }
-"raindrops/plastic1" =             { folder = 10, file = 14, duration = 27.324 }
-"raindrops/plastic2" =             { folder = 10, file = 15, duration = 36.075 }
-"raindrops/rocks1" =               { folder = 10, file = 16, duration = 29.805 }
-"raindrops/rocksLowflow1" =        { folder = 10, file = 17, duration = 46.053 }
-"raindrops/rocksLowflow2" =        { folder = 10, file = 18, duration = 36.075 }
-"raindrops/rocksHighflow" =        { folder = 10, file = 19, duration = 62.067 }
-"raindrops/dirtLowflow" =          { folder = 10, file = 20, duration = 20.558 }
-"raindrops/dirtHighflow" =         { folder = 10, file = 21, duration = 37.433 }
-"raindrops/treeLeavesLowflow" =    { folder = 10, file = 22, duration = 36.571 }
-"raindrops/treeLeavesHighflow" =   { folder = 10, file = 23, duration = 47.699 }
-"raindrops/pothosLowflow1" =       { folder = 10, file = 24, duration = 48.065 }
-"raindrops/pothosLowflow2" =       { folder = 10, file = 25, duration =  7.862 }
-"raindrops/pothosHighflow" =       { folder = 10, file = 26, duration = 54.569 }
-"raindrops/fakeFlowersLowflow" =   { folder = 10, file = 27, duration = 56.058 }
-"raindrops/fakeFlowersHighflow1" = { folder = 10, file = 28, duration = 31.059 }
-"raindrops/fakeFlowersHighflow2" = { folder = 10, file = 29, duration = 30.249 }
-"raindrops/rocks2" =               { folder = 10, file = 30, duration = 11.807 }
-
 [FileSets]
 "raindrops1"       = { regex = "^raindrops/" }
 "raindrops2"       = { regex = "^raindrops/" }
@@ -116,3 +84,191 @@ Parameters.BlinkDelay = { Mean = 0.1, Variance = 0.05,Distribution = "uniform" }
 Parameters.BlinkReps  = { Mean = 4,   Variance = 1,   Distribution = "normal" }
 Parameters.GroupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
 Parameters.GroupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }
+
+[Files]
+# # "raindrops/aluminumFoil" =       { folder = 10, file =  1, duration = 41.560 }
+# "raindrops/backOfPot" =            { folder = 10, file =  2, duration = 29.309 }
+# # "raindrops/bathroomScale" =      { folder = 10, file =  3, duration = 36.571 }
+# "raindrops/bathtub" =              { folder = 10, file =  4, duration = 20.558 }
+# "raindrops/cardboardOrPlastic" =   { folder = 10, file =  5, duration = 37.067 }
+# "raindrops/fakeLeaves" =           { folder = 10, file =  6, duration = 49.554 }
+# "raindrops/foldedUpTarp" =         { folder = 10, file =  7, duration = 35.813 }
+# # "raindrops/fourLayerAluminum" =  { folder = 10, file =  8, duration = 27.559 }
+# # "raindrops/glassOfWater" =       { folder = 10, file =  9, duration = 27.062 }
+# # "raindrops/insideOfPot" =        { folder = 10, file = 10, duration = 30.929 }
+# "raindrops/paper" =                { folder = 10, file = 11, duration = 48.378 }
+# "raindrops/paperOnTowel" =         { folder = 10, file = 12, duration = 41.325 }
+# "raindrops/paperOnTowel2" =        { folder = 10, file = 13, duration = 65.201 }
+# "raindrops/plastic1" =             { folder = 10, file = 14, duration = 27.324 }
+# "raindrops/plastic2" =             { folder = 10, file = 15, duration = 36.075 }
+# "raindrops/rocks1" =               { folder = 10, file = 16, duration = 29.805 }
+# "raindrops/rocksLowflow1" =        { folder = 10, file = 17, duration = 46.053 }
+# "raindrops/rocksLowflow2" =        { folder = 10, file = 18, duration = 36.075 }
+# "raindrops/rocksHighflow" =        { folder = 10, file = 19, duration = 62.067 }
+# "raindrops/dirtLowflow" =          { folder = 10, file = 20, duration = 20.558 }
+# "raindrops/dirtHighflow" =         { folder = 10, file = 21, duration = 37.433 }
+# "raindrops/treeLeavesLowflow" =    { folder = 10, file = 22, duration = 36.571 }
+# "raindrops/treeLeavesHighflow" =   { folder = 10, file = 23, duration = 47.699 }
+# "raindrops/pothosLowflow1" =       { folder = 10, file = 24, duration = 48.065 }
+# "raindrops/pothosLowflow2" =       { folder = 10, file = 25, duration =  7.862 }
+# "raindrops/pothosHighflow" =       { folder = 10, file = 26, duration = 54.569 }
+# "raindrops/fakeFlowersLowflow" =   { folder = 10, file = 27, duration = 56.058 }
+# "raindrops/fakeFlowersHighflow1" = { folder = 10, file = 28, duration = 31.059 }
+# "raindrops/fakeFlowersHighflow2" = { folder = 10, file = 29, duration = 30.249 }
+# "raindrops/rocks2" =               { folder = 10, file = 30, duration = 11.807 }
+"rain1x/aluminumFoil" =           { folder = 10, file =  1, duration = 41.560875 }
+"rain1x/backOfPot" =              { folder = 10, file =  2, duration = 29.309438 }
+"rain1x/bathroomScale" =          { folder = 10, file =  3, duration = 36.571438 }
+"rain1x/bathtub" =                { folder = 10, file =  4, duration = 20.558375 }
+"rain1x/cardboardOrPlastic" =     { folder = 10, file =  5, duration = 37.067813 }
+"rain1x/fakeLeaves" =             { folder = 10, file =  6, duration = 49.554313 }
+"rain1x/foldedUpTarp" =           { folder = 10, file =  7, duration = 35.813938 }
+"rain1x/fourLayerAluminum" =      { folder = 10, file =  8, duration = 27.559188 }
+"rain1x/glassOfWater" =           { folder = 10, file =  9, duration = 27.062875 }
+"rain1x/insideOfPot" =            { folder = 10, file = 10, duration = 30.929000 }
+"rain1x/paper" =                  { folder = 10, file = 11, duration = 48.378813 }
+"rain1x/paperOnTowel" =           { folder = 10, file = 12, duration = 41.325750 }
+"rain1x/paperOnTowel2" =          { folder = 10, file = 13, duration = 65.201688 }
+"rain1x/plastic1" =               { folder = 10, file = 14, duration = 27.324125 }
+"rain1x/plastic2" =               { folder = 10, file = 15, duration = 36.075125 }
+"rain1x/rocks1" =                 { folder = 10, file = 16, duration = 29.805750 }
+"rain1x/rocksLowflow1" =          { folder = 10, file = 17, duration = 46.053938 }
+"rain1x/rocksLowflow2" =          { folder = 10, file = 18, duration = 36.075125 }
+"rain1x/dirtLowflow" =            { folder = 10, file = 20, duration = 20.558375 }
+"rain1x/dirtHighflow" =           { folder = 10, file = 21, duration = 37.433500 }
+"rain1x/treeLeavesLowflow" =      { folder = 10, file = 22, duration = 36.571438 }
+"rain1x/treeLeavesHighflow" =     { folder = 10, file = 23, duration = 47.699625 }
+"rain1x/pothosLowflow1" =         { folder = 10, file = 24, duration = 48.065313 }
+"rain1x/pothosLowflow2" =         { folder = 10, file = 25, duration =  7.862875 }
+"rain1x/pothosHighflow" =         { folder = 10, file = 26, duration = 54.569813 }
+"rain1x/fakeFlowersLowflow" =     { folder = 10, file = 27, duration = 56.058813 }
+"rain1x/fakeFlowersHighflow1" =   { folder = 10, file = 28, duration = 31.059625 }
+"rain1x/fakeFlowersHighflow2" =   { folder = 10, file = 29, duration = 30.249813 }
+"rain1x/rocks2" =                 { folder = 10, file = 30, duration = 11.807375 }
+"rain1x/bathtubLevel1Highflow" =  { folder = 10, file = 31, duration = 50.102857 }
+"rain1x/bathtubLevel1Lowflow1" =  { folder = 10, file = 32, duration = 14.706939 }
+"rain1x/bathtubLevel1Lowflow2" =  { folder = 10, file = 33, duration = 33.071020 }
+"rain1x/bathtubLevel1UpHigh" =    { folder = 10, file = 34, duration = 63.843265 }
+"rain1x/bathtubLevel2Highflow" =  { folder = 10, file = 35, duration = 55.092245 }
+"rain1x/bathtubLevel2Lowflow" =   { folder = 10, file = 36, duration = 40.097959 }
+"rain1x/bathtubLevel2UpHigh" =    { folder = 10, file = 37, duration = 55.457959 }
+"rain1x/bathtubLevel3Highflow" =  { folder = 10, file = 38, duration = 77.217959 }
+"rain1x/bathtubLevel3Lowflow" =   { folder = 10, file = 39, duration = 67.422041 }
+"rain1x/bathtubLevel3UpHigh" =    { folder = 10, file = 40, duration = 54.595918 }
+"rain1x/bathtubLevel4Highflow" =  { folder = 10, file = 41, duration =106.710204 }
+"rain1x/bathtubLevel4Lowflow" =   { folder = 10, file = 42, duration = 66.586122 }
+"rain1x/bathtubLevel4UpHigh" =    { folder = 10, file = 43, duration = 86.204082 }
+"rain1x/emptyBathtubLow" =        { folder = 10, file = 44, duration = 24.920816 }
+"rain1x/emptyBathtubLow2" =       { folder = 10, file = 45, duration = 25.129796 }
+"rain1x/emptyBathtubUpHigh" =     { folder = 10, file = 46, duration = 27.088980 }
+"rain1x/emptyBathtubUpHigh2" =    { folder = 10, file = 47, duration = 43.102041 }
+"rain1x/emptyBathtubUpHigh3" =    { folder = 10, file = 48, duration = 38.765714 }
+"rain1x/emptyBathtubUpHigh4" =    { folder = 10, file = 49, duration = 25.704490 }
+"rain1x/emptyBathtubUpHigh5" =    { folder = 10, file = 50, duration = 59.585306 }
+"rain1x/bigContainerFromBelow1" = { folder = 10, file = 51, duration = 31.085714 }
+"rain1x/bigContainerFromBelow2" = { folder = 10, file = 52, duration = 38.582857 }
+"rain1x/bigContainerFromBelow3" = { folder = 10, file = 53, duration = 41.456327 }
+"rain1x/bigContainerFromBelow4" = { folder = 10, file = 54, duration = 45.975510 }
+"rain1x/doubleTowelOnFloor1" =    { folder = 10, file = 55, duration = 39.601633 }
+"rain1x/doubleTowelOnFloor2" =    { folder = 10, file = 56, duration = 64.653061 }
+"rain1x/towelCoveredContainer3" = { folder = 10, file = 57, duration = 74.579592 }
+"rain1x/towelCoveredContainer4" = { folder = 10, file = 58, duration = 56.084898 }
+"rain1x/towelCoveredContainer5" = { folder = 10, file = 59, duration = 49.084082 }
+"rain1x/towelFloorLow1" =         { folder = 10, file = 60, duration = 37.093878 }
+"rain1x/towelFloorLow2" =         { folder = 10, file = 61, duration = 40.097959 }
+"rain1x/towelOnFloor" =           { folder = 10, file = 62, duration = 31.582041 }
+"rain1x/upsideDownUmbrella" =     { folder = 10, file = 63, duration = 46.994286 }
+"singleRaindrops/cardboard1" = { folder = 11, file =  1, duration =  0.653063 }
+"singleRaindrops/cardboard2" = { folder = 11, file =  2, duration =  0.548625 }
+"singleRaindrops/cardboard3" = { folder = 11, file =  3, duration =  0.653063 }
+"singleRaindrops/cardboard4" = { folder = 11, file =  4, duration =  0.470250 }
+"singleRaindrops/paper1" =     { folder = 11, file =  5, duration =  0.809813 }
+"singleRaindrops/paper2" =     { folder = 11, file =  6, duration =  0.653063 }
+"singleRaindrops/paper3" =     { folder = 11, file =  7, duration =  0.626938 }
+"singleRaindrops/paper4" =     { folder = 11, file =  8, duration =  0.862063 }
+"singleRaindrops/paper5" =     { folder = 11, file =  9, duration =  1.018813 }
+"singleRaindrops/paper6" =     { folder = 11, file = 10, duration =  0.548625 }
+"singleRaindrops/paper7" =     { folder = 11, file = 11, duration =  0.496375 }
+"singleRaindrops/paper8" =     { folder = 11, file = 12, duration =  0.626938 }
+"rain2x/bathtubLevel1-1" =     { folder = 12, file =  1, duration = 14.759184 }
+"rain2x/bathtubLevel1-2" =     { folder = 12, file =  2, duration = 33.123265 }
+"rain2x/bathtubLevel1-3" =     { folder = 12, file =  3, duration = 50.155102 }
+"rain2x/bathtubLevel1-4" =     { folder = 12, file =  4, duration = 33.123265 }
+"rain2x/bathtubLevel2-1" =     { folder = 12, file =  5, duration = 40.150204 }
+"rain2x/bathtubLevel2-2" =     { folder = 12, file =  6, duration = 55.144490 }
+"rain2x/bathtubLevel2-3" =     { folder = 12, file =  7, duration = 40.150204 }
+"rain2x/bathtubLevel3-1" =     { folder = 12, file =  8, duration = 67.474286 }
+"rain2x/bathtubLevel3-2" =     { folder = 12, file =  9, duration = 54.648163 }
+"rain2x/bathtubLevel3-3" =     { folder = 12, file = 10, duration = 54.648163 }
+"rain2x/bathtubLevel4-1" =     { folder = 12, file = 11, duration = 66.638367 }
+"rain2x/bathtubLevel4-2" =     { folder = 12, file = 12, duration = 66.638367 }
+"rain2x/bathtubLevel4-3" =     { folder = 12, file = 13, duration = 86.256327 }
+"rain2x/containerBottom-1" =   { folder = 12, file = 14, duration = 31.137959 }
+"rain2x/containerBottom-2" =   { folder = 12, file = 15, duration = 38.635102 }
+"rain2x/containerBottom-3" =   { folder = 12, file = 16, duration = 38.635102 }
+"rain2x/containerBottom-4" =   { folder = 12, file = 17, duration = 41.508571 }
+"rain2x/emptyBathtub-1" =      { folder = 12, file = 18, duration = 38.817959 }
+"rain2x/emptyBathtub-2" =      { folder = 12, file = 19, duration = 43.154286 }
+"rain2x/emptyBathtub-3" =      { folder = 12, file = 20, duration = 38.817959 }
+"rain2x/plants-1" =            { folder = 12, file = 21, duration = 36.649796 }
+"rain2x/plants-2" =            { folder = 12, file = 22, duration = 47.777959 }
+"rain2x/plants-3" =            { folder = 12, file = 23, duration = 54.648163 }
+"rain2x/plants-4" =            { folder = 12, file = 24, duration = 48.143673 }
+"rain2x/plants-5" =            { folder = 12, file = 25, duration = 31.137959 }
+"rain2x/plants-6" =            { folder = 12, file = 26, duration = 30.328163 }
+"rain3x/bathtubLevel1-1" =     { folder = 13, file =  1, duration = 33.123265 }
+"rain3x/bathtubLevel1-2" =     { folder = 13, file =  2, duration = 14.759184 }
+"rain3x/bathtubLevel1-3" =     { folder = 13, file =  3, duration = 33.123265 }
+"rain3x/bathtubLevel1-4" =     { folder = 13, file =  4, duration = 33.123265 }
+"rain3x/bathtubLevel2and3-1" = { folder = 13, file =  5, duration = 55.144490 }
+"rain3x/bathtubLevel2and3-2" = { folder = 13, file =  6, duration = 54.648163 }
+"rain3x/bathtubLevel2and3-3" = { folder = 13, file =  7, duration = 40.150204 }
+"rain3x/bathtubLevel2and3-4" = { folder = 13, file =  8, duration = 55.144490 }
+"rain3x/bathtubLevel2" =       { folder = 13, file =  9, duration = 40.150204 }
+"rain3x/bathtubLevel3and4-1" = { folder = 13, file = 10, duration = 77.270204 }
+"rain3x/bathtubLevel3and4-2" = { folder = 13, file = 11, duration = 67.474286 }
+"rain3x/bathtubLevel3and4-3" = { folder = 13, file = 12, duration = 54.648163 }
+"rain3x/bathtubLevel3" =       { folder = 13, file = 13, duration = 54.648163 }
+"rain3x/bathtubLevel4" =       { folder = 13, file = 14, duration = 66.638367 }
+"rain3x/containerBottom-1" =   { folder = 13, file = 15, duration = 31.137959 }
+"rain3x/containerBottom-2" =   { folder = 13, file = 16, duration = 38.086531 }
+"rain3x/containerBottom-3" =   { folder = 13, file = 17, duration = 31.137959 }
+"rain3x/containerBottom-4" =   { folder = 13, file = 18, duration = 31.137959 }
+"rain3x/emptyBathtub-2" =      { folder = 13, file = 19, duration = 24.973061 }
+"rain3x/emptyBathtub-3" =      { folder = 13, file = 20, duration = 51.644082 }
+"rain3x/emptyBathtub-1" =      { folder = 13, file = 21, duration = 25.182041 }
+"rain3x/plants-1" =            { folder = 13, file = 22, duration = 36.649796 }
+"rain3x/plants-2" =            { folder = 13, file = 23, duration = 44.146939 }
+"rain3x/plants-3" =            { folder = 13, file = 24, duration = 48.143673 }
+"rain3x/plants-4" =            { folder = 13, file = 25, duration = 30.328163 }
+"rain3x/plants-5" =            { folder = 13, file = 26, duration = 31.137959 }
+"rain3x/plants-6" =            { folder = 13, file = 27, duration = 47.777959 }
+"rain4x/bathtub-1" =           { folder = 14, file =  1, duration = 46.053938 }
+"rain4x/bathtub-2" =           { folder = 14, file =  2, duration = 55.066125 }
+"rain4x/bathtub-3" =           { folder = 14, file =  3, duration = 67.448188 }
+"rain4x/bathtub-4" =           { folder = 14, file =  4, duration = 72.071875 }
+"rain4x/bathtub-5" =           { folder = 14, file =  5, duration = 66.612250 }
+"rain4x/bathtub-6" =           { folder = 14, file =  6, duration = 66.063688 }
+"rain4x/containerBottom-1" =   { folder = 14, file =  7, duration = 55.066125 }
+"rain4x/containerBottom-2" =   { folder = 14, file =  8, duration = 62.067000 }
+"rain4x/containerBottom-3" =   { folder = 14, file =  9, duration = 66.063688 }
+"rain4x/emptyBathtub-1" =      { folder = 14, file = 10, duration = 55.614750 }
+"rain4x/emptyBathtub-2" =      { folder = 14, file = 11, duration = 53.054750 }
+"rain4x/emptyBathtub-3" =      { folder = 14, file = 12, duration = 81.058000 }
+"rain4x/plants-1" =            { folder = 14, file = 13, duration = 64.052250 }
+"rain4x/plants-2" =            { folder = 14, file = 14, duration = 64.052250 }
+"rain4x/plants-3" =            { folder = 14, file = 15, duration = 54.073500 }
+"rain5x/bathtub-1" =           { folder = 15, file =  1, duration = 77.087347 }
+"rain5x/bathtub-2" =           { folder = 15, file =  2, duration = 80.587755 }
+"rain5x/bathtub-3" =           { folder = 15, file =  3, duration = 78.080000 }
+"rain5x/bathtub-4" =           { folder = 15, file =  4, duration = 85.603265 }
+"rain5x/bathtub-5" =           { folder = 15, file =  5, duration = 85.603265 }
+"rain5x/containerBottom-1" =   { folder = 15, file =  6, duration = 72.097959 }
+"rain5x/containerBottom-2" =   { folder = 15, file =  7, duration = 67.082449 }
+"rain5x/containerBottom-3" =   { folder = 15, file =  8, duration = 81.580408 }
+"rain5x/emptyBathtub-1" =      { folder = 15, file =  9, duration = 48.091429 }
+"rain5x/emptyBathtub-2" =      { folder = 15, file = 10, duration = 64.078367 }
+"rain5x/emptyBathtub-3" =      { folder = 15, file = 11, duration = 57.103673 }
+"rain5x/plants-1" =            { folder = 15, file = 12, duration = 66.089796 }
+"rain5x/plants-2" =            { folder = 15, file = 13, duration = 52.584490 }
+"rain5x/plants-3" =            { folder = 15, file = 14, duration = 53.603265 }

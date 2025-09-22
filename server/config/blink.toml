@@ -44,11 +44,12 @@ Algorithm             = "blink"
 Duration              = { Mean = 60 }
 Lease.MinClients      = 1
 Lease.Type            = "light"
+Lease.Weight          = 1
 Lease.FleetFraction   = { Mean = 1.0 }
 Lease.MaxWait         = { Mean = 30 }
-Parameters.blinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
+Parameters.BlinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
 
-[Effects.blink.Parameters.blinkDelay]
+[Effects.blink.Parameters.BlinkDelay]
 Mean         = 4
 Variance     = 4
 Distribution = "uniform"
@@ -59,27 +60,19 @@ Algorithm             = "unison"
 Duration              = { Mean = 30 }
 Lease.MinClients      = 1
 Lease.Type            = "light"
+Lease.Weight          = 1
 Lease.FleetFraction   = { Mean = 1.0 }
 Lease.MaxWait         = { Mean = 30 }
-Parameters.blinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
-Parameters.blinkDelay = { Mean = 0.1, Variance = 0.05,Distribution = "uniform" }
-Parameters.blinkReps  = { Mean = 4,   Variance = 1,   Distribution = "normal" }
-Parameters.groupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
-Parameters.groupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }
+Parameters.BlinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
+Parameters.BlinkDelay = { Mean = 0.1, Variance = 0.05,Distribution = "uniform" }
+Parameters.BlinkReps  = { Mean = 4,   Variance = 1,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
+Parameters.GroupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }
 
 [Effects.silence]
 Algorithm             = "silence"
 Duration              = { Mean = 60 }
 Lease.MinClients      = 1
 Lease.Type            = "sound"
+Lease.Weight          = 1
 Lease.FleetFraction   = { Mean = 0.5 }
-
-[Players.light]
-Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-StartupDelay = { Mean = 100 }
-Weights      = { blink = 1, unison = 1 }
-
-[Players.sound]
-Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-StartupDelay = { Mean = 500 }
-Weights      = { silence = 1 }

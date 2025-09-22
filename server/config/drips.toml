@@ -156,112 +156,113 @@ spaceship             = { Regex = "^cricketSpaceship" }
 [Effects."basic sound test"]
 Algorithm             = "nonrandom"
 Duration              = { Mean = 30000 }
-FileSets.main         = "raindrops"
+FileSets.Main         = "raindrops"
 Lease.MaxClients      = 1
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
-Parameters.fileDelay  = { Mean = 0 }
-Parameters.fileReps   = { Mean = 1,  Variance = 0, Distribution = "normal" }
-Parameters.groupDelay = { Mean = 1, Variance = 0, Distribution = "normal" }
+Parameters.FileDelay  = { Mean = 0 }
+Parameters.FileReps   = { Mean = 1,  Variance = 0, Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 1, Variance = 0, Distribution = "normal" }
 
 [Effects.stormdrops]
 Algorithm             = "storm"
 Duration              = { Mean = 3600 }
-FileSets.main         = "single"
+FileSets.Main         = "single"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
+Lease.Weight          = 1
 Lease.FleetFraction   = { Mean = 1.0, Variance = 0.2, Distribution = "uniform" }
-Parameters.volumeMin            = { Mean = 24 }
-Parameters.volumeMax            = { Mean = 48 }
-Parameters.intensityDelta       = { Mean = 5, Variance = 50 }
-Parameters.intensityUpdateFreq  = { Mean = 2 }
-Parameters.intensityThreshold   = { Mean = 25 }
-Parameters.interDropDelayMin    = { Mean = 0 }
-Parameters.interDropDelayMax    = { Mean = 3 }
-Parameters.interDropDelayVarMin = { Mean = 0.1 }
-Parameters.interDropDelayVarMax = { Mean = 2 }
-Parameters.queueRefillThresh    = { Mean = 1.5 }
-Parameters.queueRefillFreq      = { Mean = 1 }
+Parameters.VolumeMin            = { Mean = 24 }
+Parameters.VolumeMax            = { Mean = 48 }
+Parameters.IntensityDelta       = { Mean = 5, Variance = 50 }
+Parameters.IntensityUpdateFreq  = { Mean = 2 }
+Parameters.IntensityThreshold   = { Mean = 25 }
+Parameters.InterDropDelayMin    = { Mean = 0 }
+Parameters.InterDropDelayMax    = { Mean = 3 }
+Parameters.InterDropDelayVarMin = { Mean = 0.1 }
+Parameters.InterDropDelayVarMax = { Mean = 2 }
+Parameters.QueueRefillThresh    = { Mean = 1.5 }
+Parameters.QueueRefillFreq      = { Mean = 1 }
 
 [Effects.stormclips]
 Algorithm             = "storm"
 Duration              = { Mean = 3600 }
-FileSets.main         = "raindrops"
+FileSets.Main         = "raindrops"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.FleetFraction   = { Mean = 0.6, Variance = 0.2, Distribution = "uniform" }
-Parameters.volumeMin            = { Mean = 24 }
-Parameters.volumeMax            = { Mean = 48 }
-Parameters.intensityDelta       = { Mean = 5, Variance = 50 }
-Parameters.intensityUpdateFreq  = { Mean = 2 }
-Parameters.intensityThreshold   = { Mean = 25 }
-Parameters.interDropDelayMin    = { Mean = 0 }
-Parameters.interDropDelayMax    = { Mean = 3 }
-Parameters.interDropDelayVarMin = { Mean = 0.1 }
-Parameters.interDropDelayVarMax = { Mean = 2 }
-Parameters.queueRefillThresh    = { Mean = 1.5 }
-Parameters.queueRefillFreq      = { Mean = 1 }
+Parameters.VolumeMin            = { Mean = 24 }
+Parameters.VolumeMax            = { Mean = 48 }
+Parameters.IntensityDelta       = { Mean = 5, Variance = 50 }
+Parameters.IntensityUpdateFreq  = { Mean = 2 }
+Parameters.IntensityThreshold   = { Mean = 25 }
+Parameters.InterDropDelayMin    = { Mean = 0 }
+Parameters.InterDropDelayMax    = { Mean = 3 }
+Parameters.InterDropDelayVarMin = { Mean = 0.1 }
+Parameters.InterDropDelayVarMax = { Mean = 2 }
+Parameters.QueueRefillThresh    = { Mean = 1.5 }
+Parameters.QueueRefillFreq      = { Mean = 1 }
 
 [Effects.eggshaker]
 Algorithm             = "shuffle"
 Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
-FileSets.main         = "eggshaker crickets"
+FileSets.Main         = "eggshaker crickets"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
 Lease.MaxWait         = { Mean = 10 }
-Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
-Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
-Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
 
 [Effects.morsecrack]
 Algorithm             = "shuffle"
 Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
-FileSets.main         = "morsecrack crickets"
+FileSets.Main         = "morsecrack crickets"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
 Lease.MaxWait         = { Mean = 10 }
-Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
-Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
-Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
 
 [Effects.steadyboi]
 Algorithm             = "shuffle"
 Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
-FileSets.main         = "steadyboi crickets"
+FileSets.Main         = "steadyboi crickets"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
 Lease.MaxWait         = { Mean = 10 }
-Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
-Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
-Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
 
 [Effects.waltz]
 Algorithm             = "shuffle"
 Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
-FileSets.main         = "waltz crickets"
+FileSets.Main         = "waltz crickets"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
 Lease.MaxWait         = { Mean = 10 }
-Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
-Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
-Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
 
 [Effects.water]
 Algorithm             = "loop"
 Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
-FileSets.main         = "water sounds"
+FileSets.Main         = "water sounds"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
 Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
 Lease.MaxWait         = { Mean = 10 }
-Parameters.fileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
-Parameters.fileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
-Parameters.groupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
 
 
 [Effects.darkness]
@@ -269,6 +270,7 @@ Algorithm             = "darkness"
 Duration              = { Mean = 30000 }
 Lease.MinClients      = 1
 Lease.Type            = "light"
+Lease.Weight          = 1
 Lease.FleetFraction   = { Mean = 0.5 }
 
 [Effects.unison]
@@ -276,22 +278,11 @@ Algorithm             = "unison"
 Duration              = { Mean = 30 }
 Lease.MinClients      = 1
 Lease.Type            = "light"
+Lease.Weight          = 0
 Lease.FleetFraction   = { Mean = 1.0 }
 Lease.MaxWait         = { Mean = 30 }
-Parameters.blinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
-Parameters.blinkDelay = { Mean = 0.1, Variance = 0.05,Distribution = "uniform" }
-Parameters.blinkReps  = { Mean = 4,   Variance = 1,   Distribution = "normal" }
-Parameters.groupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
-Parameters.groupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }
-
-[Players.light]
-Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-StartupDelay = { Mean = 5000 }
-Weights      = { darkness = 1, unison = 0 }
-
-[Players.sound]
-Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-StartupDelay = { Mean = 20 } # "20" is better for a single one, 120 for a fleet
-
-[Players.sound.Weights]
-stormdrops         = 1
+Parameters.BlinkSpeed = { Mean = 2.0, Variance = 0.1, Distribution = "normal" }
+Parameters.BlinkDelay = { Mean = 0.1, Variance = 0.05,Distribution = "uniform" }
+Parameters.BlinkReps  = { Mean = 4,   Variance = 1,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
+Parameters.GroupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }

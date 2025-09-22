@@ -44,6 +44,7 @@ Algorithm             = "darkness"
 Duration              = { Mean = 300 }
 Lease.MinClients      = 1
 Lease.Type            = "light"
+Lease.Weight          = 1.0
 Lease.FleetFraction   = { Mean = 0.5 }
 
 [Effects.silence]
@@ -51,13 +52,5 @@ Algorithm             = "silence"
 Duration              = { Mean = 60 }
 Lease.MinClients      = 1
 Lease.Type            = "sound"
+Lease.Weight          = 1.0
 Lease.FleetFraction   = { Mean = 0.5 }
-
-[Players.light]
-Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-StartupDelay = { Mean = 100 }
-Weights      = { darkness = 1 }
-
-[Players.sound]
-Delay        = { Mean = 10, Variance = 10, Distribution = "uniform" }
-Weights      = { silence = 1 }
