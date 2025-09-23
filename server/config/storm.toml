@@ -1,4 +1,4 @@
-DefaultVolume = 24
+DefaultVolume = 48
 
 [Clients]
 64e8338918b40000 = { Name = "01" }
@@ -48,6 +48,33 @@ DefaultVolume = 24
 "raindrops3"       = { regex = "^rain3x/" }
 "raindrops4"       = { regex = "^rain4x/" }
 "raindrops5"       = { regex = "^rain5x/" }
+"dryRain1"         = { regex = "^rain1x/bigContainerFromBelow|^rain1x/emptyBathtub|^rain1x/pothos" }
+"dryRain2"         = { regex = "^rain2x/containerBottom|^rain2x/emptyBathtub|^rain2x/plants" }
+"dryRain3"         = { regex = "^rain3x/containerBottom|^rain3x/emptyBathtub|^rain3x/plants" }
+"dryRain4"         = { regex = "^rain4x/containerBottom|^rain4x/emptyBathtub|^rain4x/plants" }
+"dryRain5"         = { regex = "^rain5x/containerBottom|^rain5x/emptyBathtub|^rain5x/plants" }
+"eggshaker crickets"  = { Regex = "^eggshaker" }
+"morsecrack crickets" = { Regex = "^morsecrack" }
+"steadyboi crickets"  = { Regex = "^steadyboi" }
+"waltz crickets"      = { Regex = "^waltz" }
+
+[Effects.dryrain]
+Algorithm             = "storm"
+Duration              = { Mean = 3600 }
+FileSets.Intensity1   = "dryRain1"
+FileSets.Intensity2   = "dryRain2"
+FileSets.Intensity3   = "dryRain3"
+FileSets.Intensity4   = "dryRain4"
+FileSets.Intensity5   = "dryRain5"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.Weight          = 1
+Lease.FleetFraction   = { Mean = 1.0 }
+Parameters.VolumeMin    = { Mean = 1 }
+Parameters.VolumeMax    = { Mean = 48 }
+Parameters.Intensity    = { Mean = 0.5, Variance = 0.1, Distribution = "normal" }
+Parameters.Acceleration = { Mean = 1.0, Variance = 0.3, Distribution = "normal" }
+Parameters.Noise        = { Mean = 0, Variance = 0.001, Distribution = "normal" }
 
 [Effects.stormclips]
 Algorithm             = "storm"
@@ -59,14 +86,65 @@ FileSets.Intensity4   = "raindrops4"
 FileSets.Intensity5   = "raindrops5"
 Lease.MinClients      = 1
 Lease.Type            = "sound"
-Lease.Weight          = 1
+Lease.Weight          = 0
 Lease.FleetFraction   = { Mean = 1.0 }
-Parameters.VolumeMin    = { Mean = 0 }
+Parameters.VolumeMin    = { Mean = 1 }
 Parameters.VolumeMax    = { Mean = 48 }
 Parameters.Intensity    = { Mean = 0.5, Variance = 0.1, Distribution = "normal" }
 Parameters.Acceleration = { Mean = 1.0, Variance = 0.3, Distribution = "normal" }
 Parameters.Noise        = { Mean = 0, Variance = 0.001, Distribution = "normal" }
 
+[Effects.eggshaker]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.Main         = "eggshaker crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.Weight          = 0.2
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.morsecrack]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.Main         = "morsecrack crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.Weight          = 0.2
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.steadyboi]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.Main         = "steadyboi crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.Weight          = 0.2
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
+
+[Effects.waltz]
+Algorithm             = "shuffle"
+Duration              = { Mean = 45,  Variance = 100, Distribution = "normal" }
+FileSets.Main         = "waltz crickets"
+Lease.MinClients      = 1
+Lease.Type            = "sound"
+Lease.Weight          = 0.2
+Lease.FleetFraction   = { Mean = 0.5, Variance = 0.2, Distribution = "uniform" }
+Lease.MaxWait         = { Mean = 10 }
+Parameters.FileDelay  = { Mean = 0.5, Variance = 0.5, Distribution = "uniform" }
+Parameters.FileReps   = { Mean = 3,   Variance = 3,   Distribution = "normal" }
+Parameters.GroupDelay = { Mean = 2,   Variance = 1,   Distribution = "normal" }
 [Effects.darkness]
 Algorithm             = "darkness"
 Duration              = { Mean = 30000 }
@@ -90,6 +168,30 @@ Parameters.GroupDelay = { Mean = 8,   Variance = 3,   Distribution = "uniform" }
 Parameters.GroupReps  = { Mean = 4,   Variance = 3,   Distribution = "normal" }
 
 [Files]
+eggshaker                 = { Folder = 2, File =  1, Duration =  21.133061 }
+eggshaker_alt1            = { Folder = 2, File =  2, Duration =  28.342857 }
+eggshaker_alt2            = { Folder = 2, File =  3, Duration =  50.599184 }
+morsecrack1               = { Folder = 3, File =  1, Duration =  39.653878 }
+morsecrack2               = { Folder = 3, File =  2, Duration =  24.189388 }
+steadyboi1                = { Folder = 4, File =  1, Duration =  40.698776 }
+steadyboi2                = { Folder = 4, File =  2, Duration =  18.834286 }
+steadyboi3                = { Folder = 4, File =  3, Duration =  31.921633 }
+steadyboi2_alt1           = { Folder = 4, File =  4, Duration =  28.238367 }
+steadyboi2_alt2           = { Folder = 4, File =  5, Duration =  22.648163 }
+steadyboi2_alt3           = { Folder = 4, File =  6, Duration =  31.216327 }
+waltz2                    = { Folder = 5, File =  2, Duration =  18.599184 }
+waltz3                    = { Folder = 5, File =  3, Duration =  12.251429 }
+waltz4                    = { Folder = 5, File =  4, Duration =  13.531429 }
+waltz5                    = { Folder = 5, File =  5, Duration =  14.889796 }
+waltz6                    = { Folder = 5, File =  6, Duration =  13.818776 }
+waltz7                    = { Folder = 5, File =  7, Duration =  22.439184 }
+waltz8                    = { Folder = 5, File =  8, Duration =  35.631020 }
+waltz9                    = { Folder = 5, File =  9, Duration = 103.131429 }
+waltz3_alt1               = { Folder = 5, File = 10, Duration =  13.975510 }
+waltz4_alt1               = { Folder = 5, File = 11, Duration =  18.886531 }
+waltz4_alt2               = { Folder = 5, File = 12, Duration =  18.520816 }
+waltz5_alt1               = { Folder = 5, File = 13, Duration =  30.563265 }
+waltz5_alt2               = { Folder = 5, File = 14, Duration =  38.922449 }
 # # "raindrops/aluminumFoil" =       { folder = 10, file =  1, duration = 41.560 }
 # "raindrops/backOfPot" =            { folder = 10, file =  2, duration = 29.309 }
 # # "raindrops/bathroomScale" =      { folder = 10, file =  3, duration = 36.571 }

@@ -164,5 +164,5 @@ func (s *storm) getParams() (volume int, fs *fileset.Set, delay time.Duration) {
 
 func scale(val, minDomain, maxDomain, minRange, maxRange float64) float64 {
 	slope := (maxRange - minRange) / (maxDomain - minDomain)
-	return (val - minDomain) * slope
+	return (val - minDomain) * slope + minRange
 }

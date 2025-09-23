@@ -229,8 +229,6 @@ func (d *Device) Execute(ctx context.Context, endpoint string, args map[string]s
 		return "", fmt.Errorf("%s %s: err = %v", times, message, err)
 	}
 
-	log.Debugf("URL: %v\n", url)
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return getURLFailure(err, fmt.Sprintf("NewRequest(%s) returned error", desc))
